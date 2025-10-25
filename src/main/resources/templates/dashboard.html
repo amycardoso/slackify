@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Slackify</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .connected {
+            color: #27ae60;
+        }
+        .disconnected {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Slackify Dashboard</h1>
+
+        <div class="status-card">
+            <h2>Connection Status</h2>
+            <p>Use the <code>/slackify status</code> command in Slack to see your current status.</p>
+        </div>
+
+        <div class="status-card">
+            <h2>Quick Commands</h2>
+            <ul>
+                <li><code>/slackify play</code> - Resume playback</li>
+                <li><code>/slackify pause</code> - Pause playback</li>
+                <li><code>/slackify status</code> - View your status</li>
+                <li><code>/slackify enable</code> - Enable auto-sync</li>
+                <li><code>/slackify disable</code> - Disable auto-sync</li>
+                <li><code>/slackify sync</code> - Manual sync</li>
+            </ul>
+        </div>
+
+        <div class="status-card">
+            <h2>How It Works</h2>
+            <p>Slackify automatically checks your Spotify playback every 10 seconds and updates your Slack status when the song changes.</p>
+            <p>Your OAuth tokens are encrypted and stored securely in MongoDB.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: slackify-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: slackify
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - slackify-network
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: slackify-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Slack Configuration
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET}
+      SLACK_REDIRECT_URI: ${SLACK_REDIRECT_URI}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+
+      # Spotify Configuration
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
+      SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI}
+
+      # MongoDB Configuration
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/slackify
+
+      # Encryption
+      ENCRYPTION_SECRET_KEY: ${ENCRYPTION_SECRET_KEY}
+    depends_on:
+      - mongodb
+    networks:
+      - slackify-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  slackify-network:
+    driver: bridge
