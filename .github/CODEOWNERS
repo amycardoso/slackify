@@ -1,0 +1,22 @@
+# CODEOWNERS file for Slackify
+# These owners will be requested for review when someone opens a pull request.
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+* @amycardoso
+
+# Gradle dependency files
+build.gradle @amycardoso
+settings.gradle @amycardoso
+gradle.properties @amycardoso
+
+# Configuration files
+src/main/resources/application.properties @amycardoso
+.env.example @amycardoso
+
+# Security-sensitive files
+src/main/java/com/slackify/slackify/util/EncryptionUtil.java @amycardoso
+src/main/java/com/slackify/slackify/config/SecurityConfig.java @amycardoso
+
+# Documentation
+*.md @amycardoso
