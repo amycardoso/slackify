@@ -1,4 +1,4 @@
-package com.slackify.slackify.util;
+package com.trackify.trackify.util;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +24,7 @@ public class EncryptionUtil {
     private static final int KEY_LENGTH = 256;
     private static final int ITERATION_COUNT = 65536;
 
-    @Value("${slackify.encryption.secret-key}")
+    @Value("${trackify.encryption.secret-key}")
     private String secretKeyString;
 
     private static final SecureRandom secureRandom = new SecureRandom();
@@ -78,7 +78,7 @@ public class EncryptionUtil {
     }
 
     private SecretKey getSecretKey() throws Exception {
-        byte[] salt = "slackify-salt-2025".getBytes(StandardCharsets.UTF_8);
+        byte[] salt = "trackify-salt-2025".getBytes(StandardCharsets.UTF_8);
         KeySpec keySpec = new PBEKeySpec(secretKeyString.toCharArray(), salt, ITERATION_COUNT, KEY_LENGTH);
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         byte[] keyBytes = factory.generateSecret(keySpec).getEncoded();

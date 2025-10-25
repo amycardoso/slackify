@@ -1,4 +1,4 @@
-# 🎵 Slackify - Music-Slack Status Sync App
+# 🎵 Trackify - Music-Slack Status Sync App
 
 ![Java](https://img.shields.io/badge/Java-25-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.7-brightgreen)
@@ -7,7 +7,7 @@
 ![Spotify API](https://img.shields.io/badge/Spotify-API-1DB954)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Slackify automatically syncs your currently playing Spotify music with your Slack status, allowing you to share what you're listening to with your team in real-time.
+Trackify automatically syncs your currently playing Spotify music with your Slack status, allowing you to share what you're listening to with your team in real-time.
 
 ## ✨ Features
 
@@ -38,14 +38,14 @@ Slackify automatically syncs your currently playing Spotify music with your Slac
 
 ```bash
 git clone <repository-url>
-cd slackify
+cd trackify
 ```
 
 ### 2. Configure Slack App
 
 1. Go to [Slack API Console](https://api.slack.com/apps)
 2. Click "Create New App" → "From scratch"
-3. Name it "Slackify" and select your workspace
+3. Name it "Trackify" and select your workspace
 4. Navigate to "OAuth & Permissions":
    - Add Redirect URL: `http://localhost:8080/oauth/slack/callback`
    - Add Bot Token Scopes:
@@ -53,9 +53,9 @@ cd slackify
      - `users.profile:read`
      - `chat:write`
 5. Navigate to "Slash Commands" and create a new command:
-   - Command: `/slackify`
+   - Command: `/trackify`
    - Request URL: `http://localhost:8080/slack/events`
-   - Description: "Control Slackify music sync"
+   - Description: "Control Trackify music sync"
 6. Navigate to "Basic Information":
    - Copy your **Client ID**, **Client Secret**, and **Signing Secret**
 
@@ -63,7 +63,7 @@ cd slackify
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Click "Create an App"
-3. Name it "Slackify" and provide a description
+3. Name it "Trackify" and provide a description
 4. Add Redirect URI: `http://localhost:8080/oauth/spotify/callback`
 5. Copy your **Client ID** and **Client Secret**
 
@@ -101,7 +101,7 @@ SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 SPOTIFY_REDIRECT_URI=http://localhost:8080/oauth/spotify/callback
 
 # MongoDB Configuration (update if using cloud)
-SPRING_DATA_MONGODB_URI=mongodb://localhost:27017/slackify
+SPRING_DATA_MONGODB_URI=mongodb://localhost:27017/trackify
 
 # Encryption (generate a strong random key)
 ENCRYPTION_SECRET_KEY=your_32_character_secret_key_here
@@ -138,13 +138,13 @@ The application will start on `http://localhost:8080`
 
 Use these commands in any Slack channel:
 
-- `/slackify play` - Resume Spotify playback
-- `/slackify pause` - Pause Spotify playback
-- `/slackify status` - Show current sync status and settings
-- `/slackify sync` - Manually trigger music sync
-- `/slackify enable` - Enable automatic music sync
-- `/slackify disable` - Disable automatic music sync
-- `/slackify help` - Show help message
+- `/trackify play` - Resume Spotify playback
+- `/trackify pause` - Pause Spotify playback
+- `/trackify status` - Show current sync status and settings
+- `/trackify sync` - Manually trigger music sync
+- `/trackify enable` - Enable automatic music sync
+- `/trackify disable` - Disable automatic music sync
+- `/trackify help` - Show help message
 
 ## ⚙️ Configuration
 
@@ -153,7 +153,7 @@ Use these commands in any Slack channel:
 The default polling interval is 10 seconds. To change it, update `application.properties`:
 
 ```properties
-slackify.sync.polling-interval=10000  # milliseconds
+trackify.sync.polling-interval=10000  # milliseconds
 ```
 
 ### Status Template
@@ -173,7 +173,7 @@ Available placeholders:
 Change the default music emoji in `application.properties`:
 
 ```properties
-slackify.sync.default-emoji=:headphones:
+trackify.sync.default-emoji=:headphones:
 ```
 
 ## 🏗️ Architecture
@@ -181,7 +181,7 @@ slackify.sync.default-emoji=:headphones:
 ### Project Structure
 
 ```
-src/main/java/com/slackify/slackify/
+src/main/java/com/trackify/trackify/
 ├── config/                 # Configuration classes
 │   ├── SecurityConfig.java
 │   ├── SlackConfig.java
@@ -250,7 +250,7 @@ src/main/java/com/slackify/slackify/
 
 1. Create Heroku app:
 ```bash
-heroku create slackify-app
+heroku create trackify-app
 ```
 
 2. Add MongoDB addon:
@@ -276,7 +276,7 @@ git push heroku main
 
 ```bash
 # Build image
-docker build -t slackify .
+docker build -t trackify .
 
 # Run with docker-compose
 docker-compose up -d
@@ -299,7 +299,7 @@ docker-compose up -d
 - If issues persist, re-authorize Spotify connection
 
 ### Status Not Updating
-- Verify sync is enabled: `/slackify status`
+- Verify sync is enabled: `/trackify status`
 - Check application logs for errors
 - Ensure Spotify is actually playing (not paused)
 

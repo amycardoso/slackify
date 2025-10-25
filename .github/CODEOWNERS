@@ -15,8 +15,8 @@ src/main/resources/application.properties @amycardoso
 .env.example @amycardoso
 
 # Security-sensitive files
-src/main/java/com/slackify/slackify/util/EncryptionUtil.java @amycardoso
-src/main/java/com/slackify/slackify/config/SecurityConfig.java @amycardoso
+src/main/java/com/trackify/trackify/util/EncryptionUtil.java @amycardoso
+src/main/java/com/trackify/trackify/config/SecurityConfig.java @amycardoso
 
 # Documentation
 *.md @amycardoso

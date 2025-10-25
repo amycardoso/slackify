@@ -1,10 +1,10 @@
-package com.slackify.slackify.service;
+package com.trackify.trackify.service;
 
-import com.slackify.slackify.model.User;
-import com.slackify.slackify.model.UserSettings;
-import com.slackify.slackify.repository.UserRepository;
-import com.slackify.slackify.repository.UserSettingsRepository;
-import com.slackify.slackify.util.EncryptionUtil;
+import com.trackify.trackify.model.User;
+import com.trackify.trackify.model.UserSettings;
+import com.trackify.trackify.repository.UserRepository;
+import com.trackify.trackify.repository.UserSettingsRepository;
+import com.trackify.trackify.util.EncryptionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

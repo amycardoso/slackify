@@ -1,4 +1,4 @@
-package com.slackify.slackify.controller;
+package com.trackify.trackify.controller;
 
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.servlet.SlackAppServlet;

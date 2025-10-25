@@ -1,13 +1,13 @@
-package com.slackify.slackify.controller;
+package com.trackify.trackify.controller;
 
 import com.slack.api.Slack;
 import com.slack.api.methods.MethodsClient;
 import com.slack.api.methods.request.oauth.OAuthV2AccessRequest;
 import com.slack.api.methods.response.oauth.OAuthV2AccessResponse;
-import com.slackify.slackify.config.SpotifyConfig;
-import com.slackify.slackify.model.User;
-import com.slackify.slackify.service.SpotifyService;
-import com.slackify.slackify.service.UserService;
+import com.trackify.trackify.config.SpotifyConfig;
+import com.trackify.trackify.model.User;
+import com.trackify.trackify.service.SpotifyService;
+import com.trackify.trackify.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

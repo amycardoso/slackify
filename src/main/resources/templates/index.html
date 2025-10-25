@@ -3,94 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slackify - Music-Slack Status Sync</title>
+    <title>Trackify - Music-Slack Status Sync</title>
     <style>
+        :root {
+            --spotify-green: #1DB954;
+            --slack-purple: #4A154B;
+            --bg-dark: #121212;
+            --bg-card: #181818;
+            --text-white: #FFFFFF;
+            --text-gray: #B3B3B3;
+            --hover-bg: #282828;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-white);
+            line-height: 1.6;
             min-height: 100vh;
         }
+
         .container {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
         }
-        h1 {
-            color: #667eea;
-            margin-bottom: 10px;
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
         }
+
+        .logo {
+            font-size: 48px;
+            font-weight: 900;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--spotify-green) 0%, var(--slack-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -2px;
+        }
+
+        .logo-icon {
+            display: inline-block;
+            margin-right: 8px;
+        }
+
         .subtitle {
-            color: #666;
-            margin-bottom: 30px;
+            font-size: 18px;
+            color: var(--text-gray);
+            margin-bottom: 24px;
+            font-weight: 300;
         }
-        .features {
-            margin: 30px 0;
-        }
-        .feature {
-            margin: 15px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
+
         .cta-button {
             display: inline-block;
-            padding: 15px 30px;
-            background: #667eea;
-            color: white;
+            padding: 14px 32px;
+            background: var(--spotify-green);
+            color: var(--text-white);
             text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background 0.3s;
-            margin-top: 20px;
+            border-radius: 500px;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(29, 185, 84, 0.3);
         }
+
         .cta-button:hover {
-            background: #5568d3;
+            background: #1ed760;
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(29, 185, 84, 0.4);
         }
-        .emoji {
+
+        /* Features Section */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .feature {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .feature:hover {
+            background: var(--hover-bg);
+            transform: translateY(-4px);
+            border-color: var(--spotify-green);
+            box-shadow: 0 8px 24px rgba(29, 185, 84, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
+        .feature h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: var(--text-white);
+            font-weight: 700;
+        }
+
+        .feature p {
+            color: var(--text-gray);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        /* Commands Section */
+        .commands {
+            background: var(--bg-card);
+            padding: 32px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .commands h2 {
             font-size: 24px;
-            margin-right: 10px;
+            margin-bottom: 24px;
+            text-align: center;
+            color: var(--text-white);
+        }
+
+        .commands-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            list-style: none;
+        }
+
+        .command-item {
+            background: var(--bg-dark);
+            padding: 14px 18px;
+            border-radius: 8px;
+            border-left: 4px solid var(--spotify-green);
+            transition: all 0.3s ease;
+        }
+
+        .command-item:hover {
+            border-left-color: var(--slack-purple);
+            transform: translateX(4px);
+        }
+
+        .command-item code {
+            color: var(--spotify-green);
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            background: rgba(29, 185, 84, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .command-item span {
+            color: var(--text-gray);
+            margin-left: 12px;
+            font-size: 14px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 40px;
+            }
+
+            .subtitle {
+                font-size: 18px;
+            }
+
+            .cta-button {
+                padding: 16px 36px;
+                font-size: 14px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .commands {
+                padding: 32px 24px;
+            }
+
+            .commands h2 {
+                font-size: 24px;
+            }
+
+            .commands-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero, .features, .commands {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        /* Gradient Accent */
+        .gradient-line {
+            height: 3px;
+            background: linear-gradient(90deg, var(--spotify-green) 0%, var(--slack-purple) 100%);
+            margin: 40px auto 30px;
+            width: 150px;
+            border-radius: 2px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1><span class="emoji">🎵</span>Slackify</h1>
-        <p class="subtitle">Sync your currently playing music with your Slack status</p>
+        <!-- Hero Section -->
+        <div class="hero">
+            <h1 class="logo">
+                <span class="logo-icon">♫</span>Trackify
+            </h1>
+            <p class="subtitle">Sync your currently playing music with your Slack status</p>
+            <a href="/oauth/slack" class="cta-button">Get Started - Connect with Slack</a>
+        </div>
 
+        <!-- Gradient Divider -->
+        <div class="gradient-line"></div>
+
+        <!-- Features Section -->
         <div class="features">
             <div class="feature">
-                <strong>🎧 Auto-sync your music</strong>
+                <div class="feature-icon">🎧</div>
+                <h3>Auto-sync your music</h3>
                 <p>Automatically update your Slack status with what you're listening to on Spotify</p>
             </div>
             <div class="feature">
-                <strong>⚡ Real-time updates</strong>
+                <div class="feature-icon">⚡</div>
+                <h3>Real-time updates</h3>
                 <p>Status updates every 10 seconds when your music changes</p>
             </div>
             <div class="feature">
-                <strong>🎮 Playback controls</strong>
+                <div class="feature-icon">🎮</div>
+                <h3>Playback controls</h3>
                 <p>Control Spotify playback directly from Slack with slash commands</p>
             </div>
             <div class="feature">
-                <strong>✨ Customizable</strong>
+                <div class="feature-icon">✨</div>
+                <h3>Customizable</h3>
                 <p>Choose your emoji, customize status format, and control what's shown</p>
             </div>
         </div>
 
-        <a href="/oauth/slack" class="cta-button">Get Started - Connect with Slack</a>
-
-        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-            <h3>Available Commands</h3>
-            <ul>
-                <li><code>/slackify play</code> - Resume playback</li>
-                <li><code>/slackify pause</code> - Pause playback</li>
-                <li><code>/slackify status</code> - View sync status</li>
-                <li><code>/slackify enable/disable</code> - Toggle sync</li>
+        <!-- Commands Section -->
+        <div class="commands">
+            <h2>Available Commands</h2>
+            <ul class="commands-list">
+                <li class="command-item">
+                    <code>/trackify play</code>
+                    <span>Resume playback</span>
+                </li>
+                <li class="command-item">
+                    <code>/trackify pause</code>
+                    <span>Pause playback</span>
+                </li>
+                <li class="command-item">
+                    <code>/trackify status</code>
+                    <span>View sync status</span>
+                </li>
+                <li class="command-item">
+                    <code>/trackify enable/disable</code>
+                    <span>Toggle sync</span>
+                </li>
             </ul>
         </div>
     </div>

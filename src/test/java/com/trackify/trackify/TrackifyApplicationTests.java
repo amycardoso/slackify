@@ -1,10 +1,10 @@
-package com.slackify.slackify;
+package com.trackify.trackify;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SlackifyApplicationTests {
+class TrackifyApplicationTests {
 
 	@Test
 	void contextLoads() {

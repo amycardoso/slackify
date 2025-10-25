@@ -1,6 +1,6 @@
-package com.slackify.slackify.repository;
+package com.trackify.trackify.repository;
 
-import com.slackify.slackify.model.User;
+import com.trackify.trackify.model.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
