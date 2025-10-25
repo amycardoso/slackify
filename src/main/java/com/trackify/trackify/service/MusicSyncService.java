@@ -1,7 +1,7 @@
-package com.slackify.slackify.service;
+package com.trackify.trackify.service;
 
-import com.slackify.slackify.model.User;
-import com.slackify.slackify.service.SpotifyService.CurrentlyPlayingTrackInfo;
+import com.trackify.trackify.model.User;
+import com.trackify.trackify.service.SpotifyService.CurrentlyPlayingTrackInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,7 +18,7 @@ public class MusicSyncService {
     private final SpotifyService spotifyService;
     private final SlackService slackService;
 
-    @Scheduled(fixedDelayString = "${slackify.sync.polling-interval}")
+    @Scheduled(fixedDelayString = "${trackify.sync.polling-interval}")
     public void syncMusicStatus() {
         log.debug("Starting music status sync cycle");
 

@@ -1,6 +1,6 @@
-# 🚀 Slackify Setup Guide
+# 🚀 Trackify Setup Guide
 
-This guide will walk you through setting up Slackify step by step.
+This guide will walk you through setting up Trackify step by step.
 
 ## Prerequisites Checklist
 
@@ -47,7 +47,7 @@ brew services list | grep mongodb
 
 **Option B: Docker**
 ```bash
-docker run -d -p 27017:27017 --name slackify-mongodb mongo:7.0
+docker run -d -p 27017:27017 --name trackify-mongodb mongo:7.0
 ```
 
 **Option C: MongoDB Atlas (Cloud)**
@@ -63,7 +63,7 @@ docker run -d -p 27017:27017 --name slackify-mongodb mongo:7.0
 1. **Go to Slack API Console**
    - Visit: https://api.slack.com/apps
    - Click "Create New App" → "From scratch"
-   - App Name: `Slackify`
+   - App Name: `Trackify`
    - Workspace: Select your workspace
    - Click "Create App"
 
@@ -84,7 +84,7 @@ docker run -d -p 27017:27017 --name slackify-mongodb mongo:7.0
 4. **Create Slash Command**
    - In left sidebar, click "Slash Commands"
    - Click "Create New Command"
-   - Command: `/slackify`
+   - Command: `/trackify`
    - Request URL: `http://localhost:8080/slack/events`
    - Short Description: `Control your music sync`
    - Usage Hint: `[play|pause|status|help]`
@@ -112,7 +112,7 @@ docker run -d -p 27017:27017 --name slackify-mongodb mongo:7.0
    - Click "Create an App"
 
 2. **Configure App**
-   - App Name: `Slackify`
+   - App Name: `Trackify`
    - App Description: `Music-Slack Status Sync`
    - Redirect URIs: Add `http://localhost:8080/oauth/spotify/callback`
    - Check the agreement box
@@ -161,10 +161,10 @@ docker run -d -p 27017:27017 --name slackify-mongodb mongo:7.0
 
    # MongoDB Configuration
    # For local MongoDB:
-   SPRING_DATA_MONGODB_URI=mongodb://localhost:27017/slackify
+   SPRING_DATA_MONGODB_URI=mongodb://localhost:27017/trackify
 
    # For MongoDB Atlas:
-   # SPRING_DATA_MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/slackify
+   # SPRING_DATA_MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/trackify
 
    # Encryption (from generated key)
    ENCRYPTION_SECRET_KEY=your_generated_key_from_step_2
@@ -195,12 +195,12 @@ docker run -d -p 27017:27017 --name slackify-mongodb mongo:7.0
 
    Or run the JAR directly:
    ```bash
-   java -jar build/libs/slackify-0.0.1-SNAPSHOT.jar
+   java -jar build/libs/trackify-0.0.1-SNAPSHOT.jar
    ```
 
 4. **Verify it's running:**
    - Open browser to http://localhost:8080
-   - You should see the Slackify home page
+   - You should see the Trackify home page
 
 ### 7. Test the Setup
 
@@ -212,7 +212,7 @@ docker run -d -p 27017:27017 --name slackify-mongodb mongo:7.0
 
 2. **Test Slack commands:**
    - Open Slack
-   - Type `/slackify help`
+   - Type `/trackify help`
    - You should see the help message
 
 3. **Test music sync:**
@@ -281,13 +281,13 @@ echo $SLACK_CLIENT_ID
 1. **Check sync is enabled:**
    ```bash
    # In Slack
-   /slackify status
+   /trackify status
    ```
 
 2. **Check logs:**
    ```bash
    # View application logs
-   tail -f logs/slackify.log
+   tail -f logs/trackify.log
 
    # Or if using docker-compose
    docker-compose logs -f app
@@ -296,7 +296,7 @@ echo $SLACK_CLIENT_ID
 3. **Manual sync:**
    ```bash
    # In Slack
-   /slackify sync
+   /trackify sync
    ```
 
 ### MongoDB connection issues
@@ -339,7 +339,7 @@ When deploying to production:
 
 - Read the [README.md](README.md) for complete documentation
 - Customize your status template
-- Invite team members to use Slackify
+- Invite team members to use Trackify
 - Report issues or contribute on GitHub
 
 ## Getting Help
@@ -348,7 +348,7 @@ If you encounter issues:
 
 1. Check the troubleshooting section above
 2. Review application logs
-3. Check [GitHub Issues](https://github.com/your-repo/slackify/issues)
+3. Check [GitHub Issues](https://github.com/your-repo/trackify/issues)
 4. Create a new issue with:
    - Steps to reproduce
    - Error messages

@@ -1,4 +1,4 @@
-package com.slackify.slackify;
+package com.trackify.trackify;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -8,10 +8,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableRetry
 @EnableScheduling
-public class SlackifyApplication {
+public class TrackifyApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SlackifyApplication.class, args);
+		SpringApplication.run(TrackifyApplication.class, args);
 	}
 
 }

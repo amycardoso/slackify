@@ -1,4 +1,4 @@
-package com.slackify.slackify.model;
+package com.trackify.trackify.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

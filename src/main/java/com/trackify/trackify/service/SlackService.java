@@ -1,12 +1,12 @@
-package com.slackify.slackify.service;
+package com.trackify.trackify.service;
 
 import com.slack.api.methods.MethodsClient;
 import com.slack.api.methods.SlackApiException;
 import com.slack.api.methods.request.users.profile.UsersProfileSetRequest;
 import com.slack.api.methods.response.users.profile.UsersProfileSetResponse;
 import com.slack.api.model.User.Profile;
-import com.slackify.slackify.model.User;
-import com.slackify.slackify.model.UserSettings;
+import com.trackify.trackify.model.User;
+import com.trackify.trackify.model.UserSettings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;

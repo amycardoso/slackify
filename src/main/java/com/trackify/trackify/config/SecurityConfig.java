@@ -1,4 +1,4 @@
-package com.slackify.slackify.config;
+package com.trackify.trackify.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

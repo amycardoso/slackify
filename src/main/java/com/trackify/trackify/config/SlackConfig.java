@@ -1,4 +1,4 @@
-package com.slackify.slackify.config;
+package com.trackify.trackify.config;
 
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;

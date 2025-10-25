@@ -1,14 +1,14 @@
-package com.slackify.slackify.slack;
+package com.trackify.trackify.slack;
 
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.context.builtin.SlashCommandContext;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;
 import com.slack.api.bolt.response.Response;
-import com.slackify.slackify.model.User;
-import com.slackify.slackify.model.UserSettings;
-import com.slackify.slackify.service.MusicSyncService;
-import com.slackify.slackify.service.SpotifyService;
-import com.slackify.slackify.service.UserService;
+import com.trackify.trackify.model.User;
+import com.trackify.trackify.model.UserSettings;
+import com.trackify.trackify.service.MusicSyncService;
+import com.trackify.trackify.service.SpotifyService;
+import com.trackify.trackify.service.UserService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,13 +28,13 @@ public class SlackCommandHandler {
 
     @PostConstruct
     public void registerCommands() {
-        // /slackify command router
-        slackApp.command("/slackify", (req, ctx) -> {
+        // /trackify command router
+        slackApp.command("/trackify", (req, ctx) -> {
             String text = req.getPayload().getText().trim();
             String[] parts = text.split("\\s+");
             String subCommand = parts.length > 0 ? parts[0].toLowerCase() : "";
 
-            log.info("Received /slackify command: {} from user: {}",
+            log.info("Received /trackify command: {} from user: {}",
                     text, req.getPayload().getUserId());
 
             return switch (subCommand) {
@@ -197,13 +197,13 @@ public class SlackCommandHandler {
         String helpMessage = """
                 :musical_note: *Slackify Commands*
 
-                `/slackify play` - Resume Spotify playback
-                `/slackify pause` - Pause Spotify playback
-                `/slackify status` - Show current sync status
-                `/slackify sync` - Manually trigger music sync
-                `/slackify enable` - Enable automatic music sync
-                `/slackify disable` - Disable automatic music sync
-                `/slackify help` - Show this help message
+                `/trackify play` - Resume Spotify playback
+                `/trackify pause` - Pause Spotify playback
+                `/trackify status` - Show current sync status
+                `/trackify sync` - Manually trigger music sync
+                `/trackify enable` - Enable automatic music sync
+                `/trackify disable` - Disable automatic music sync
+                `/trackify help` - Show this help message
 
                 :link: To get started, connect your accounts at: /oauth/slack
                 """;

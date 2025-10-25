@@ -1,4 +1,4 @@
-package com.slackify.slackify.config;
+package com.trackify.trackify.config;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
