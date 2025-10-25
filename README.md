@@ -1,5 +1,12 @@
 # 🎵 Slackify - Music-Slack Status Sync App
 
+![Java](https://img.shields.io/badge/Java-25-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.7-brightgreen)
+![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green)
+![Slack API](https://img.shields.io/badge/Slack-API-4A154B)
+![Spotify API](https://img.shields.io/badge/Spotify-API-1DB954)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 Slackify automatically syncs your currently playing Spotify music with your Slack status, allowing you to share what you're listening to with your team in real-time.
 
 ## ✨ Features
