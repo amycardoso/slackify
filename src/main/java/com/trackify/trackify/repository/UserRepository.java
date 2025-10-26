@@ -12,6 +12,8 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     Optional<User> findBySlackUserId(String slackUserId);
 
+    Optional<User> findBySlackTeamId(String slackTeamId);
+
     Optional<User> findBySpotifyUserId(String spotifyUserId);
 
     List<User> findByActiveTrue();

@@ -1,16 +1,10 @@
 package com.trackify.trackify.controller;
 
-import com.slack.api.Slack;
-import com.slack.api.methods.MethodsClient;
-import com.slack.api.methods.request.oauth.OAuthV2AccessRequest;
-import com.slack.api.methods.response.oauth.OAuthV2AccessResponse;
 import com.trackify.trackify.config.SpotifyConfig;
-import com.trackify.trackify.model.User;
 import com.trackify.trackify.service.SpotifyService;
 import com.trackify.trackify.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,66 +24,7 @@ public class OAuthController {
     private final SpotifyService spotifyService;
     private final SpotifyConfig spotifyConfig;
 
-    @Value("${slack.client-id}")
-    private String slackClientId;
-
-    @Value("${slack.client-secret}")
-    private String slackClientSecret;
-
-    @Value("${slack.redirect-uri}")
-    private String slackRedirectUri;
-
-    private final Slack slack = Slack.getInstance();
-
-    @GetMapping("/slack")
-    public RedirectView initiateSlackOAuth() {
-        String slackAuthUrl = "https://slack.com/oauth/v2/authorize"
-                + "?client_id=" + slackClientId
-                + "&user_scope=users.profile:write,users.profile:read"
-                + "&redirect_uri=" + slackRedirectUri;
-
-        log.info("Initiating Slack OAuth flow");
-        return new RedirectView(slackAuthUrl);
-    }
-
-    @GetMapping("/slack/callback")
-    public String handleSlackCallback(@RequestParam("code") String code,
-                                      @RequestParam(value = "state", required = false) String state) {
-        try {
-            log.info("Received Slack OAuth callback with code: {}", code.substring(0, 10) + "...");
-
-            MethodsClient client = slack.methods();
-            OAuthV2AccessRequest request = OAuthV2AccessRequest.builder()
-                    .clientId(slackClientId)
-                    .clientSecret(slackClientSecret)
-                    .code(code)
-                    .redirectUri(slackRedirectUri)
-                    .build();
-
-            OAuthV2AccessResponse response = client.oauthV2Access(request);
-
-            if (!response.isOk()) {
-                log.error("Slack OAuth error: {}", response.getError());
-                return "redirect:/error?message=slack_auth_failed";
-            }
-
-            String userId = response.getAuthedUser().getId();
-            String teamId = response.getTeam().getId();
-            String accessToken = response.getAuthedUser().getAccessToken();
-
-            // Create or update user
-            User user = userService.createOrUpdateUser(userId, teamId, accessToken);
-
-            log.info("Successfully authenticated Slack user: {}", userId);
-
-            // Redirect to Spotify authorization
-            return "redirect:/oauth/spotify?userId=" + user.getId();
-
-        } catch (Exception e) {
-            log.error("Error handling Slack OAuth callback", e);
-            return "redirect:/error?message=slack_auth_error";
-        }
-    }
+    // Slack OAuth is now handled by Bolt at /slack/install and /slack/oauth_redirect
 
     @GetMapping("/spotify")
     public RedirectView initiateSpotifyOAuth(@RequestParam("userId") String userId) {
