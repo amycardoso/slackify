@@ -48,10 +48,11 @@ cd trackify
 3. Name it "Trackify" and select your workspace
 4. Navigate to "OAuth & Permissions":
    - Add Redirect URL: `http://localhost:8080/oauth/slack/callback`
-   - Add Bot Token Scopes:
-     - `users.profile:write`
-     - `users.profile:read`
-     - `chat:write`
+   - **IMPORTANT**: Add **User Token Scopes** (NOT Bot Token Scopes):
+     - `users.profile:write` (allows updating user's own status)
+     - `users.profile:read` (allows reading user's profile)
+   - Optional Bot Token Scopes:
+     - `chat:write` (optional - for sending messages)
 5. Navigate to "Slash Commands" and create a new command:
    - Command: `/trackify`
    - Request URL: `http://localhost:8080/slack/events`
