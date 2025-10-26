@@ -29,9 +29,4 @@ public class HomeController {
     public String dashboard() {
         return "dashboard";
     }
-
-    @GetMapping("/health")
-    public String health() {
-        return "OK";
-    }
 }
