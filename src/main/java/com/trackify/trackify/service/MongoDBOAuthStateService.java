@@ -1,60 +1,57 @@
 package com.trackify.trackify.service;
 
 import com.slack.api.bolt.service.OAuthStateService;
+import com.trackify.trackify.model.OAuthState;
+import com.trackify.trackify.repository.OAuthStateRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.LocalDateTime;
 
+/**
+ * MongoDB-based OAuth state service for CSRF protection.
+ * States are automatically expired after 10 minutes via MongoDB TTL index.
+ */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MongoDBOAuthStateService implements OAuthStateService {
 
-    // In-memory storage for OAuth state (valid for ~10 minutes)
-    // For production, you might want to use Redis or MongoDB with TTL
-    private final Map<String, Long> stateStore = new ConcurrentHashMap<>();
-    private static final long STATE_EXPIRATION_MS = 10 * 60 * 1000; // 10 minutes
+    private final OAuthStateRepository oauthStateRepository;
 
     @Override
     public void addNewStateToDatastore(String state) throws Exception {
-        log.debug("Storing OAuth state: {}", state);
-        stateStore.put(state, System.currentTimeMillis());
+        log.debug("Storing OAuth state in MongoDB: {}", state);
 
-        // Clean up expired states
-        cleanupExpiredStates();
+        OAuthState oauthState = OAuthState.builder()
+                .state(state)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        oauthStateRepository.save(oauthState);
+        log.info("OAuth state stored successfully: {}", state);
     }
 
     @Override
     public boolean isAvailableInDatabase(String state) {
-        log.debug("Checking OAuth state: {}", state);
+        log.debug("Checking OAuth state in MongoDB: {}", state);
 
-        Long timestamp = stateStore.get(state);
-        if (timestamp == null) {
-            log.warn("OAuth state not found: {}", state);
+        boolean exists = oauthStateRepository.existsByState(state);
+
+        if (!exists) {
+            log.warn("OAuth state not found or expired: {}", state);
             return false;
         }
 
-        // Check if expired
-        if (System.currentTimeMillis() - timestamp > STATE_EXPIRATION_MS) {
-            log.warn("OAuth state expired: {}", state);
-            stateStore.remove(state);
-            return false;
-        }
-
+        log.info("OAuth state validated successfully: {}", state);
         return true;
     }
 
     @Override
     public void deleteStateFromDatastore(String state) throws Exception {
-        log.debug("Deleting OAuth state: {}", state);
-        stateStore.remove(state);
-    }
-
-    private void cleanupExpiredStates() {
-        long now = System.currentTimeMillis();
-        stateStore.entrySet().removeIf(entry ->
-            now - entry.getValue() > STATE_EXPIRATION_MS
-        );
+        log.debug("Deleting OAuth state from MongoDB: {}", state);
+        oauthStateRepository.deleteByState(state);
+        log.info("OAuth state deleted: {}", state);
     }
 }
