@@ -24,9 +24,4 @@ public class HomeController {
         model.addAttribute("error", message != null ? message : "An error occurred");
         return "error";
     }
-
-    @GetMapping("/dashboard")
-    public String dashboard() {
-        return "dashboard";
-    }
 }
