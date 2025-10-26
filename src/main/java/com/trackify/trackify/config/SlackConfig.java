@@ -32,6 +32,9 @@ public class SlackConfig {
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .signingSecret(signingSecret)
+                .scope("commands,users.profile:read,users.profile:write")
+                .oauthInstallPath("/slack/install")
+                .oauthRedirectUriPath("/slack/oauth_redirect")
                 .build();
     }
 
