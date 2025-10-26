@@ -195,7 +195,7 @@ public class SlackCommandHandler {
 
     private Response handleHelp(SlashCommandRequest req, SlashCommandContext ctx) {
         String helpMessage = """
-                :musical_note: *Slackify Commands*
+                :musical_note: *Trackify Commands*
 
                 `/trackify play` - Resume Spotify playback
                 `/trackify pause` - Pause Spotify playback
@@ -213,7 +213,7 @@ public class SlackCommandHandler {
 
     private String buildStatusMessage(User user, UserSettings settings) {
         StringBuilder message = new StringBuilder();
-        message.append(":musical_note: *Your Slackify Status*\n\n");
+        message.append(":musical_note: *Your Trackify Status*\n\n");
 
         // Sync status
         message.append("*Sync Status:* ");
