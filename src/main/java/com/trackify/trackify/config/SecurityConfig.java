@@ -14,14 +14,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/slack/**", "/oauth/**", "/api/**")
+                        .ignoringRequestMatchers("/slack/**", "/oauth/**", "/api/**", "/health")
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/oauth/**", "/slack/**", "/health", "/").permitAll()
+                        .requestMatchers("/oauth/**", "/slack/**", "/health", "/", "/success", "/error", "/dashboard").permitAll()
                         .anyRequest().authenticated()
-                )
-                .oauth2Login(oauth2 -> oauth2
-                        .defaultSuccessUrl("/dashboard", true)
                 );
 
         return http.build();
