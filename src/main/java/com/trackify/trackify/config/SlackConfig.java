@@ -2,6 +2,10 @@ package com.trackify.trackify.config;
 
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
+import com.slack.api.bolt.service.builtin.oauth.OAuthErrorHandler;
+import com.slack.api.bolt.service.builtin.oauth.OAuthV2SuccessHandler;
+import com.slack.api.bolt.request.builtin.OAuthCallbackRequest;
+import com.slack.api.methods.response.oauth.OAuthV2AccessResponse;
 import com.trackify.trackify.service.MongoDBInstallationService;
 import com.trackify.trackify.service.MongoDBOAuthStateService;
 import lombok.extern.slf4j.Slf4j;
@@ -44,10 +48,10 @@ public class SlackConfig {
         app.service(installationService);
         app.service(oauthStateService);
 
-        // OAuth success handler - redirects to Spotify authorization
-        app.oauthCallbackSuccess((req, resp, oAuthCallbackContext) -> {
-            String slackUserId = resp.getAuthedUser().getId();
-            String teamId = resp.getTeam().getId();
+        // OAuth V2 Success Handler - called after Slack OAuth completes
+        app.oauthCallback((OAuthV2SuccessHandler) (req, resp, oauthAccess) -> {
+            String slackUserId = oauthAccess.getAuthedUser().getId();
+            String teamId = oauthAccess.getTeam().getId();
 
             log.info("Slack OAuth completed for user: {} in team: {}", slackUserId, teamId);
 
@@ -79,15 +83,16 @@ public class SlackConfig {
                     .build();
         });
 
-        // OAuth error/cancellation handler
-        app.oauthCallbackError((req, resp, oAuthCallbackContext) -> {
-            log.error("Slack OAuth error: {}", resp.getError());
+        // OAuth Error Handler - called if OAuth fails
+        app.oauthCallbackError((OAuthErrorHandler) (req, resp) -> {
+            String error = req.getPayload().getError();
+            log.error("Slack OAuth error: {}", error);
             return com.slack.api.bolt.response.Response.builder()
                     .statusCode(200)
                     .contentType("text/html")
-                    .body("<html><body><h1>Installation Cancelled</h1>" +
-                          "<p>The Slack app installation was cancelled or failed.</p>" +
-                          "<p>Error: " + (resp.getError() != null ? resp.getError() : "Unknown") + "</p>" +
+                    .body("<html><body><h1>Installation Failed</h1>" +
+                          "<p>The Slack app installation failed.</p>" +
+                          "<p>Error: " + (error != null ? error : "Unknown") + "</p>" +
                           "</body></html>")
                     .build();
         });

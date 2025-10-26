@@ -12,23 +12,25 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
 import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MongoDBInstallationService extends InstallationService {
+public class MongoDBInstallationService implements InstallationService {
 
     private final UserRepository userRepository;
+    private boolean historicalDataEnabled = false;
 
     @Override
     public boolean isHistoricalDataEnabled() {
-        return false;
+        return historicalDataEnabled;
     }
 
     @Override
-    public void setHistoricalDataEnabled(boolean historicalDataEnabled) {
-        // Not supported
+    public void setHistoricalDataEnabled(boolean enabled) {
+        this.historicalDataEnabled = enabled;
     }
 
     @Override
@@ -101,7 +103,7 @@ public class MongoDBInstallationService extends InstallationService {
         bot.setBotAccessToken(user.getSlackAccessToken()); // Using user token as bot token
         bot.setBotUserId(user.getSlackUserId());
         bot.setInstalledAt(user.getCreatedAt() != null ?
-            user.getCreatedAt().toString() : null);
+            user.getCreatedAt().atZone(ZoneId.systemDefault()).toEpochSecond() : null);
 
         log.info("Found installation for teamId: {}", teamId);
         return bot;
@@ -131,7 +133,7 @@ public class MongoDBInstallationService extends InstallationService {
         installer.setScope("users.profile:write,users.profile:read");
         installer.setInstallerUserAccessToken(user.getSlackAccessToken());
         installer.setInstalledAt(user.getCreatedAt() != null ?
-            user.getCreatedAt().toString() : null);
+            user.getCreatedAt().atZone(ZoneId.systemDefault()).toEpochSecond() : null);
 
         log.info("Found installer for userId: {}", userId);
         return installer;
