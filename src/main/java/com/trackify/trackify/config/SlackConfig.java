@@ -2,9 +2,12 @@ package com.trackify.trackify.config;
 
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+@Slf4j
 
 @Configuration
 public class SlackConfig {
@@ -33,6 +36,10 @@ public class SlackConfig {
 
         // Configure OAuth settings
         app.asOAuthApp(true);
+
+        log.info("Slack App bean created with config - clientId: {}, signingSecret present: {}",
+                clientId != null && !clientId.isEmpty() ? "present" : "missing",
+                signingSecret != null && !signingSecret.isEmpty());
 
         return app;
     }
