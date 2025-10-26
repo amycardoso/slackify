@@ -58,7 +58,7 @@ public class SlackCommandHandler {
             Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
 
             if (userOpt.isEmpty()) {
-                return ctx.ack(":x: You need to connect your Spotify account first. Visit /oauth/slack to get started.");
+                return ctx.ack(":x: You need to connect your Spotify account first. Visit /slack/install to get started.");
             }
 
             User user = userOpt.get();
@@ -81,7 +81,7 @@ public class SlackCommandHandler {
             Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
 
             if (userOpt.isEmpty()) {
-                return ctx.ack(":x: You need to connect your Spotify account first. Visit /oauth/slack to get started.");
+                return ctx.ack(":x: You need to connect your Spotify account first. Visit /slack/install to get started.");
             }
 
             User user = userOpt.get();
@@ -104,7 +104,7 @@ public class SlackCommandHandler {
             Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
 
             if (userOpt.isEmpty()) {
-                return ctx.ack(":x: You need to connect your Spotify account first. Visit /oauth/slack to get started.");
+                return ctx.ack(":x: You need to connect your Spotify account first. Visit /slack/install to get started.");
             }
 
             User user = userOpt.get();
@@ -205,7 +205,7 @@ public class SlackCommandHandler {
                 `/trackify disable` - Disable automatic music sync
                 `/trackify help` - Show this help message
 
-                :link: To get started, connect your accounts at: /oauth/slack
+                :link: To get started, connect your accounts at: /slack/install
                 """;
 
         return ctx.ack(helpMessage);
