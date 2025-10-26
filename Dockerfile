@@ -1,7 +1,7 @@
-# Multi-stage build for Slackify
+# Multi-stage build for Trackify
 
 # Stage 1: Build
-FROM gradle:8.5-jdk21 AS build
+FROM gradle:9.1.0-jdk AS build
 
 WORKDIR /app
 
@@ -9,17 +9,14 @@ WORKDIR /app
 COPY build.gradle settings.gradle ./
 COPY gradle ./gradle
 
-# Download dependencies
-RUN gradle dependencies --no-daemon
-
 # Copy source code
 COPY src ./src
 
-# Build the application
-RUN gradle bootJar --no-daemon
+# Build the application (dependencies will be downloaded automatically)
+RUN gradle bootJar --no-daemon -x test
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
