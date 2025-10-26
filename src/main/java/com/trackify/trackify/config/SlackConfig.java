@@ -44,24 +44,50 @@ public class SlackConfig {
         app.service(installationService);
         app.service(oauthStateService);
 
-        // Add OAuth completion endpoints
-        app.endpoint("GET", "/slack/oauth/completion", (req, ctx) -> {
+        // OAuth success handler - redirects to Spotify authorization
+        app.oauthCallbackSuccess((req, resp, oAuthCallbackContext) -> {
+            String slackUserId = resp.getAuthedUser().getId();
+            String teamId = resp.getTeam().getId();
+
+            log.info("Slack OAuth completed for user: {} in team: {}", slackUserId, teamId);
+
+            // Find the user we just created in MongoDB
+            String userId = installationService.findUserIdBySlackUserId(slackUserId);
+
+            if (userId == null) {
+                log.error("Could not find user after OAuth completion for slackUserId: {}", slackUserId);
+                return com.slack.api.bolt.response.Response.builder()
+                        .statusCode(500)
+                        .contentType("text/html")
+                        .body("<html><body><h1>Error</h1>" +
+                              "<p>Installation completed but user not found. Please try again.</p>" +
+                              "</body></html>")
+                        .build();
+            }
+
+            // Generate Spotify OAuth link with userId
+            String spotifyAuthLink = "/oauth/spotify?userId=" + userId;
+
             return com.slack.api.bolt.response.Response.builder()
                     .statusCode(200)
                     .contentType("text/html")
-                    .body("<html><body><h1>Installation Successful!</h1>" +
+                    .body("<html><body><h1>Slack Connected!</h1>" +
                           "<p>Trackify has been installed to your workspace.</p>" +
-                          "<p>Now, please authorize Spotify: <a href='/oauth/spotify'>Connect Spotify</a></p>" +
+                          "<p><strong>Next step:</strong> Connect your Spotify account to enable music sync.</p>" +
+                          "<p><a href='" + spotifyAuthLink + "' style='display: inline-block; padding: 10px 20px; background: #1DB954; color: white; text-decoration: none; border-radius: 5px;'>Connect Spotify</a></p>" +
                           "</body></html>")
                     .build();
         });
 
-        app.endpoint("GET", "/slack/oauth/cancellation", (req, ctx) -> {
+        // OAuth error/cancellation handler
+        app.oauthCallbackError((req, resp, oAuthCallbackContext) -> {
+            log.error("Slack OAuth error: {}", resp.getError());
             return com.slack.api.bolt.response.Response.builder()
                     .statusCode(200)
                     .contentType("text/html")
                     .body("<html><body><h1>Installation Cancelled</h1>" +
-                          "<p>The Slack app installation was cancelled.</p>" +
+                          "<p>The Slack app installation was cancelled or failed.</p>" +
+                          "<p>Error: " + (resp.getError() != null ? resp.getError() : "Unknown") + "</p>" +
                           "</body></html>")
                     .build();
         });

@@ -136,4 +136,13 @@ public class MongoDBInstallationService extends InstallationService {
         log.info("Found installer for userId: {}", userId);
         return installer;
     }
+
+    /**
+     * Helper method to find MongoDB User ID by Slack User ID
+     * Used after OAuth completion to link Spotify account
+     */
+    public String findUserIdBySlackUserId(String slackUserId) {
+        Optional<User> userOpt = userRepository.findBySlackUserId(slackUserId);
+        return userOpt.map(User::getId).orElse(null);
+    }
 }
