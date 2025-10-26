@@ -73,13 +73,13 @@ docker run -d -p 27017:27017 --name trackify-mongodb mongo:7.0
    - Add: `http://localhost:8080/oauth/slack/callback`
    - For production, also add your deployed URL
 
-3. **Add Bot Token Scopes**
+3. **Add OAuth Scopes**
    - Scroll to "Scopes" section
-   - Under "User Token Scopes", add:
-     - `users.profile:write`
-     - `users.profile:read`
+   - **IMPORTANT**: Under "User Token Scopes" (NOT Bot Token Scopes), add:
+     - `users.profile:write` - Required for updating user's status
+     - `users.profile:read` - Required for reading user's profile
    - Under "Bot Token Scopes" (optional), add:
-     - `chat:write`
+     - `chat:write` - Optional, for sending messages
 
 4. **Create Slash Command**
    - In left sidebar, click "Slash Commands"

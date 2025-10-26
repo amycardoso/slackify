@@ -9,6 +9,25 @@
 
 Trackify automatically syncs your currently playing Spotify music with your Slack status, allowing you to share what you're listening to with your team in real-time.
 
+## 📚 Documentation
+
+- **[Setup Guide](SETUP_GUIDE.md)** - Complete setup instructions
+- **[Railway Deployment](RAILWAY_DEPLOYMENT.md)** - Deploy to Railway.app
+- **[Environment Variables Setup](RAILWAY_ENV_SETUP.md)** - Critical for Railway deployment
+- **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Commands Reference](COMMANDS.md)** - All available slash commands
+
+## 🚨 Railway Deployment Error?
+
+**Getting this error?**
+```
+Could not resolve placeholder 'SLACK_CLIENT_ID' in value "${SLACK_CLIENT_ID}"
+```
+
+**→ See [RAILWAY_SETUP_NOW.md](RAILWAY_SETUP_NOW.md) for step-by-step instructions to fix this NOW!**
+
+**TL;DR:** You need to set 10 environment variables in Railway's dashboard. The app cannot start without them.
+
 ## ✨ Features
 
 - 🎧 **Auto-sync**: Automatically updates your Slack status with currently playing Spotify tracks
