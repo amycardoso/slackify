@@ -45,7 +45,7 @@ public class OAuthController {
     public RedirectView initiateSlackOAuth() {
         String slackAuthUrl = "https://slack.com/oauth/v2/authorize"
                 + "?client_id=" + slackClientId
-                + "&scope=users.profile:write,users.profile:read"
+                + "&user_scope=users.profile:write,users.profile:read"
                 + "&redirect_uri=" + slackRedirectUri;
 
         log.info("Initiating Slack OAuth flow");
