@@ -2,6 +2,7 @@ package com.trackify.trackify.service;
 
 import com.trackify.trackify.config.SpotifyConfig;
 import com.trackify.trackify.exception.*;
+import com.trackify.trackify.model.CurrentlyPlayingTrackInfo;
 import com.trackify.trackify.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -172,14 +173,5 @@ public class SpotifyService {
         }
 
         return builder.build();
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class CurrentlyPlayingTrackInfo {
-        private String trackId;
-        private String trackName;
-        private String artistName;
-        private boolean isPlaying;
     }
 }

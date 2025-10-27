@@ -1,7 +1,7 @@
 package com.trackify.trackify.service;
 
+import com.trackify.trackify.model.CurrentlyPlayingTrackInfo;
 import com.trackify.trackify.model.User;
-import com.trackify.trackify.service.SpotifyService.CurrentlyPlayingTrackInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
