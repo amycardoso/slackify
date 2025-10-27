@@ -2,46 +2,39 @@ package com.trackify.trackify.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OAuthTemplateService {
 
-    private final ResourceLoader resourceLoader;
+    private final TemplateEngine templateEngine;
 
     public String renderSuccess(String spotifyAuthLink) {
         try {
-            String template = loadTemplate("classpath:templates/slack-oauth-success.html");
-            return template.replace("{{SPOTIFY_AUTH_LINK}}", spotifyAuthLink);
-        } catch (IOException e) {
-            log.error("Failed to load success template", e);
+            Context context = new Context();
+            context.setVariable("spotifyAuthLink", spotifyAuthLink);
+            return templateEngine.process("slack-oauth-success", context);
+        } catch (Exception e) {
+            log.error("Failed to render success template", e);
             return getFallbackSuccessHtml(spotifyAuthLink);
         }
     }
 
     public String renderError(String errorTitle, String errorDescription, String errorDetails) {
         try {
-            String template = loadTemplate("classpath:templates/slack-oauth-error.html");
-            return template
-                    .replace("{{ERROR_TITLE}}", errorTitle)
-                    .replace("{{ERROR_DESCRIPTION}}", errorDescription)
-                    .replace("{{ERROR_DETAILS}}", errorDetails);
-        } catch (IOException e) {
-            log.error("Failed to load error template", e);
+            Context context = new Context();
+            context.setVariable("errorTitle", errorTitle);
+            context.setVariable("errorDescription", errorDescription);
+            context.setVariable("errorDetails", errorDetails);
+            return templateEngine.process("slack-oauth-error", context);
+        } catch (Exception e) {
+            log.error("Failed to render error template", e);
             return getFallbackErrorHtml(errorTitle, errorDetails);
         }
-    }
-
-    private String loadTemplate(String location) throws IOException {
-        Resource resource = resourceLoader.getResource(location);
-        return resource.getContentAsString(StandardCharsets.UTF_8);
     }
 
     private String getFallbackSuccessHtml(String spotifyAuthLink) {
