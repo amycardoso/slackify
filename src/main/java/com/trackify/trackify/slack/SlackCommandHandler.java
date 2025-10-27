@@ -57,71 +57,19 @@ public class SlackCommandHandler {
     }
 
     private Response handlePlay(SlashCommandRequest req, SlashCommandContext ctx) {
-        try {
-            String slackUserId = req.getPayload().getUserId();
-            Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
-
-            if (userOpt.isEmpty()) {
-                return ctx.ack(errorMessageService.buildNotConnectedMessage());
-            }
-
-            User user = userOpt.get();
-            if (user.getEncryptedSpotifyAccessToken() == null) {
-                return ctx.ack(errorMessageService.buildNotConnectedMessage());
-            }
-
-            spotifyService.resumePlayback(user);
-            return ctx.ack(":arrow_forward: Playback resumed!");
-
-        } catch (NoActiveDeviceException e) {
-            return ctx.ack(errorMessageService.buildNoDeviceMessage());
-        } catch (SpotifyTokenExpiredException e) {
-            return ctx.ack(errorMessageService.buildTokenExpiredMessage(req.getPayload().getUserId()));
-        } catch (SpotifyPremiumRequiredException e) {
-            return ctx.ack(errorMessageService.buildPremiumRequiredMessage());
-        } catch (SpotifyRateLimitException e) {
-            return ctx.ack(errorMessageService.buildRateLimitMessage());
-        } catch (SpotifyException e) {
-            log.error("Spotify error handling play command", e);
-            return ctx.ack(errorMessageService.buildNetworkErrorMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error handling play command", e);
-            return ctx.ack(errorMessageService.buildGenericErrorMessage());
-        }
+        return executeSpotifyCommand(req, ctx, "play",
+                user -> {
+                    spotifyService.resumePlayback(user);
+                    return ":arrow_forward: Playback resumed!";
+                });
     }
 
     private Response handlePause(SlashCommandRequest req, SlashCommandContext ctx) {
-        try {
-            String slackUserId = req.getPayload().getUserId();
-            Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
-
-            if (userOpt.isEmpty()) {
-                return ctx.ack(errorMessageService.buildNotConnectedMessage());
-            }
-
-            User user = userOpt.get();
-            if (user.getEncryptedSpotifyAccessToken() == null) {
-                return ctx.ack(errorMessageService.buildNotConnectedMessage());
-            }
-
-            spotifyService.pausePlayback(user);
-            return ctx.ack(":pause_button: Playback paused!");
-
-        } catch (NoActiveDeviceException e) {
-            return ctx.ack(errorMessageService.buildNoDeviceMessage());
-        } catch (SpotifyTokenExpiredException e) {
-            return ctx.ack(errorMessageService.buildTokenExpiredMessage(req.getPayload().getUserId()));
-        } catch (SpotifyPremiumRequiredException e) {
-            return ctx.ack(errorMessageService.buildPremiumRequiredMessage());
-        } catch (SpotifyRateLimitException e) {
-            return ctx.ack(errorMessageService.buildRateLimitMessage());
-        } catch (SpotifyException e) {
-            log.error("Spotify error handling pause command", e);
-            return ctx.ack(errorMessageService.buildNetworkErrorMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error handling pause command", e);
-            return ctx.ack(errorMessageService.buildGenericErrorMessage());
-        }
+        return executeSpotifyCommand(req, ctx, "pause",
+                user -> {
+                    spotifyService.pausePlayback(user);
+                    return ":pause_button: Playback paused!";
+                });
     }
 
     private Response handleStatus(SlashCommandRequest req, SlashCommandContext ctx) {
@@ -164,59 +112,11 @@ public class SlackCommandHandler {
     }
 
     private Response handleEnable(SlashCommandRequest req, SlashCommandContext ctx) {
-        try {
-            String slackUserId = req.getPayload().getUserId();
-            Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
-
-            if (userOpt.isEmpty()) {
-                return ctx.ack(":x: User not found.");
-            }
-
-            User user = userOpt.get();
-            Optional<UserSettings> settingsOpt = userService.getUserSettings(user.getId());
-
-            if (settingsOpt.isEmpty()) {
-                return ctx.ack(":x: User settings not found.");
-            }
-
-            UserSettings settings = settingsOpt.get();
-            settings.setSyncEnabled(true);
-            userService.updateUserSettings(settings);
-
-            return ctx.ack(":white_check_mark: Music sync enabled!");
-
-        } catch (Exception e) {
-            log.error("Error handling enable command", e);
-            return ctx.ack(":x: Failed to enable sync. Error: " + e.getMessage());
-        }
+        return updateSyncSetting(req, ctx, true, ":white_check_mark: Music sync enabled!", "enable");
     }
 
     private Response handleDisable(SlashCommandRequest req, SlashCommandContext ctx) {
-        try {
-            String slackUserId = req.getPayload().getUserId();
-            Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
-
-            if (userOpt.isEmpty()) {
-                return ctx.ack(":x: User not found.");
-            }
-
-            User user = userOpt.get();
-            Optional<UserSettings> settingsOpt = userService.getUserSettings(user.getId());
-
-            if (settingsOpt.isEmpty()) {
-                return ctx.ack(":x: User settings not found.");
-            }
-
-            UserSettings settings = settingsOpt.get();
-            settings.setSyncEnabled(false);
-            userService.updateUserSettings(settings);
-
-            return ctx.ack(":no_entry: Music sync disabled!");
-
-        } catch (Exception e) {
-            log.error("Error handling disable command", e);
-            return ctx.ack(":x: Failed to disable sync. Error: " + e.getMessage());
-        }
+        return updateSyncSetting(req, ctx, false, ":no_entry: Music sync disabled!", "disable");
     }
 
     private Response handleReconnect(SlashCommandRequest req, SlashCommandContext ctx) {
@@ -292,5 +192,85 @@ public class SlackCommandHandler {
         message.append("• Notifications: ").append(settings.isNotificationsEnabled() ? "Enabled" : "Disabled");
 
         return message.toString();
+    }
+
+    // Helper methods to reduce duplication
+
+    private Response executeSpotifyCommand(SlashCommandRequest req, SlashCommandContext ctx,
+                                          String commandName, SpotifyCommandAction action) {
+        try {
+            User user = validateUserAndSpotifyConnection(req, ctx);
+            if (user == null) {
+                return ctx.ack(errorMessageService.buildNotConnectedMessage());
+            }
+
+            String successMessage = action.execute(user);
+            return ctx.ack(successMessage);
+
+        } catch (NoActiveDeviceException e) {
+            return ctx.ack(errorMessageService.buildNoDeviceMessage());
+        } catch (SpotifyTokenExpiredException e) {
+            return ctx.ack(errorMessageService.buildTokenExpiredMessage(req.getPayload().getUserId()));
+        } catch (SpotifyPremiumRequiredException e) {
+            return ctx.ack(errorMessageService.buildPremiumRequiredMessage());
+        } catch (SpotifyRateLimitException e) {
+            return ctx.ack(errorMessageService.buildRateLimitMessage());
+        } catch (SpotifyException e) {
+            log.error("Spotify error handling {} command", commandName, e);
+            return ctx.ack(errorMessageService.buildNetworkErrorMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error handling {} command", commandName, e);
+            return ctx.ack(errorMessageService.buildGenericErrorMessage());
+        }
+    }
+
+    private User validateUserAndSpotifyConnection(SlashCommandRequest req, SlashCommandContext ctx) {
+        String slackUserId = req.getPayload().getUserId();
+        Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
+
+        if (userOpt.isEmpty()) {
+            return null;
+        }
+
+        User user = userOpt.get();
+        if (user.getEncryptedSpotifyAccessToken() == null) {
+            return null;
+        }
+
+        return user;
+    }
+
+    private Response updateSyncSetting(SlashCommandRequest req, SlashCommandContext ctx,
+                                       boolean enabled, String successMessage, String operation) {
+        try {
+            String slackUserId = req.getPayload().getUserId();
+            Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
+
+            if (userOpt.isEmpty()) {
+                return ctx.ack(":x: User not found.");
+            }
+
+            User user = userOpt.get();
+            Optional<UserSettings> settingsOpt = userService.getUserSettings(user.getId());
+
+            if (settingsOpt.isEmpty()) {
+                return ctx.ack(":x: User settings not found.");
+            }
+
+            UserSettings settings = settingsOpt.get();
+            settings.setSyncEnabled(enabled);
+            userService.updateUserSettings(settings);
+
+            return ctx.ack(successMessage);
+
+        } catch (Exception e) {
+            log.error("Error handling {} command", operation, e);
+            return ctx.ack(":x: Failed to " + operation + " sync. Error: " + e.getMessage());
+        }
+    }
+
+    @FunctionalInterface
+    private interface SpotifyCommandAction {
+        String execute(User user);
     }
 }
