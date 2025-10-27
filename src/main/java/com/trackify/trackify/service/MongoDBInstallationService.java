@@ -35,8 +35,16 @@ public class MongoDBInstallationService implements InstallationService {
 
     @Override
     public void saveInstallerAndBot(Installer installer) throws Exception {
-        log.info("Saving Slack installation for teamId: {}, userId: {}",
-                installer.getTeamId(), installer.getInstallerUserId());
+        log.info("=== SAVE INSTALLER AND BOT CALLED ===");
+        log.info("TeamId: {}, UserId: {}, AccessToken present: {}",
+                installer.getTeamId(),
+                installer.getInstallerUserId(),
+                installer.getInstallerUserAccessToken() != null);
+
+        if (installer.getInstallerUserId() == null) {
+            log.error("Installer userId is null! Cannot save installation.");
+            throw new IllegalArgumentException("Installer userId cannot be null");
+        }
 
         // Check if user already exists
         Optional<User> existingUser = userRepository.findBySlackUserId(installer.getInstallerUserId());
@@ -59,11 +67,20 @@ public class MongoDBInstallationService implements InstallationService {
                     .createdAt(java.time.LocalDateTime.now())
                     .updatedAt(java.time.LocalDateTime.now())
                     .build();
-            log.info("Creating new user: {}", user.getSlackUserId());
+            log.info("Creating NEW user with slackUserId: {}", user.getSlackUserId());
         }
 
-        userRepository.save(user);
-        log.info("Slack installation saved successfully for user: {}", user.getSlackUserId());
+        User savedUser = userRepository.save(user);
+        log.info("=== USER SAVED TO MONGODB === ID: {}, SlackUserId: {}",
+                savedUser.getId(), savedUser.getSlackUserId());
+
+        // Verify the save worked by immediately querying
+        Optional<User> verification = userRepository.findBySlackUserId(installer.getInstallerUserId());
+        if (verification.isPresent()) {
+            log.info("VERIFICATION SUCCESS: User found in DB immediately after save");
+        } else {
+            log.error("VERIFICATION FAILED: User NOT found in DB after save!");
+        }
     }
 
     @Override
