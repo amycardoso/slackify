@@ -21,6 +21,7 @@ import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRefreshRequest;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRequest;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeUriRequest;
+import se.michaelthelin.spotify.requests.data.player.GetUsersCurrentlyPlayingTrackRequest;
 
 import java.io.IOException;
 import java.net.URI;
@@ -90,6 +91,7 @@ public class SpotifyService {
                         .trackName(track.getName())
                         .artistName(artistName)
                         .isPlaying(currentlyPlaying.getIs_playing())
+                        .durationMs(track.getDurationMs())
                         .build();
             }
 

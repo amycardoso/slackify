@@ -41,7 +41,7 @@ public class UserSettings {
     private boolean showSongTitle = true;
 
     @Builder.Default
-    private String statusTemplate = "{title} - {artist}";
+    private String statusTemplate = "{artist} - {title}";
 
     @Builder.Default
     private Map<String, String> genreEmojiMap = new HashMap<>();

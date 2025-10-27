@@ -10,4 +10,5 @@ public class CurrentlyPlayingTrackInfo {
     private String trackName;
     private String artistName;
     private boolean isPlaying;
+    private Integer durationMs; // Track duration in milliseconds
 }
