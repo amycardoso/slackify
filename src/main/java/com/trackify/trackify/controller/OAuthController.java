@@ -24,16 +24,11 @@ public class OAuthController {
     private final SpotifyService spotifyService;
     private final SpotifyConfig spotifyConfig;
 
-    // Slack OAuth is now handled by Bolt at /slack/install and /slack/oauth_redirect
-
     @GetMapping("/spotify")
     public RedirectView initiateSpotifyOAuth(@RequestParam("userId") String userId) {
         log.info("Initiating Spotify OAuth flow for user: {}", userId);
 
         URI authUri = spotifyService.getAuthorizationUri();
-
-        // In a real implementation, you'd want to store the userId in session or state parameter
-        // For simplicity, we're using a query parameter (not recommended for production)
         String redirectUrl = authUri.toString() + "&state=" + userId;
 
         return new RedirectView(redirectUrl);

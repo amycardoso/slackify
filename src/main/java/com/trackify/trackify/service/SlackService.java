@@ -43,11 +43,6 @@ public class SlackService {
             setSlackStatus(user.getSlackAccessToken(), statusText, statusEmoji);
 
             log.info("Updated Slack status for user {}: {}", user.getSlackUserId(), statusText);
-
-            if (settings.isNotificationsEnabled()) {
-                // Optional: Send a DM notification to the user
-                // This can be implemented if needed
-            }
         } catch (Exception e) {
             log.error("Error updating Slack status for user {}", user.getSlackUserId(), e);
             throw new RuntimeException("Failed to update Slack status", e);
