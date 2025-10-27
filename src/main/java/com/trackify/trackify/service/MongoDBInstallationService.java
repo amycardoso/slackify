@@ -7,7 +7,9 @@ import com.slack.api.bolt.model.builtin.DefaultInstaller;
 import com.slack.api.bolt.service.InstallationService;
 import com.slack.api.model.Conversation;
 import com.trackify.trackify.model.User;
+import com.trackify.trackify.model.UserSettings;
 import com.trackify.trackify.repository.UserRepository;
+import com.trackify.trackify.repository.UserSettingsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import java.util.Optional;
 public class MongoDBInstallationService implements InstallationService {
 
     private final UserRepository userRepository;
+    private final UserSettingsRepository userSettingsRepository;
     private boolean historicalDataEnabled = false;
 
     @Override
@@ -73,6 +76,25 @@ public class MongoDBInstallationService implements InstallationService {
         User savedUser = userRepository.save(user);
         log.info("=== USER SAVED TO MONGODB === ID: {}, SlackUserId: {}",
                 savedUser.getId(), savedUser.getSlackUserId());
+
+        // Create default UserSettings for new users
+        if (existingUser.isEmpty()) {
+            UserSettings defaultSettings = UserSettings.builder()
+                    .userId(savedUser.getId())
+                    .syncEnabled(true)
+                    .defaultEmoji(":musical_note:")
+                    .notificationsEnabled(false)
+                    .showArtist(true)
+                    .showSongTitle(true)
+                    .statusTemplate("{emoji} {title} - {artist}")
+                    .createdAt(java.time.LocalDateTime.now())
+                    .updatedAt(java.time.LocalDateTime.now())
+                    .build();
+
+            UserSettings savedSettings = userSettingsRepository.save(defaultSettings);
+            log.info("=== DEFAULT USER SETTINGS CREATED === ID: {}, UserId: {}",
+                    savedSettings.getId(), savedSettings.getUserId());
+        }
 
         // Verify the save worked by immediately querying
         Optional<User> verification = userRepository.findBySlackUserId(installer.getInstallerUserId());
