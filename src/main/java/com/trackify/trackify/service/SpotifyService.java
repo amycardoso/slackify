@@ -1,6 +1,7 @@
 package com.trackify.trackify.service;
 
 import com.trackify.trackify.config.SpotifyConfig;
+import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.exception.*;
 import com.trackify.trackify.model.CurrentlyPlayingTrackInfo;
 import com.trackify.trackify.model.User;
@@ -86,7 +87,7 @@ public class SpotifyService {
 
             if (currentlyPlaying.getItem() instanceof Track) {
                 Track track = (Track) currentlyPlaying.getItem();
-                String artistName = track.getArtists().length > 0 ? track.getArtists()[0].getName() : "Unknown Artist";
+                String artistName = track.getArtists().length > 0 ? track.getArtists()[0].getName() : AppConstants.UNKNOWN_ARTIST;
 
                 return CurrentlyPlayingTrackInfo.builder()
                         .trackId(track.getId())
