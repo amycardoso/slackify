@@ -21,7 +21,6 @@ import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRefreshRequest;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRequest;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeUriRequest;
-import se.michaelthelin.spotify.requests.data.player.GetUsersCurrentlyPlayingTrackRequest;
 
 import java.io.IOException;
 import java.net.URI;
@@ -74,7 +73,7 @@ public class SpotifyService {
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
             SpotifyApi spotifyApi = getSpotifyApi(accessToken);
 
-            GetUsersCurrentlyPlayingTrackRequest request = spotifyApi.getUsersCurrentlyPlayingTrack().build();
+            var request = spotifyApi.getUsersCurrentlyPlayingTrack().build();
             CurrentlyPlaying currentlyPlaying = request.execute();
 
             if (currentlyPlaying == null || currentlyPlaying.getItem() == null) {
