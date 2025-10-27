@@ -86,7 +86,7 @@ public class MongoDBInstallationService implements InstallationService {
                     .notificationsEnabled(false)
                     .showArtist(true)
                     .showSongTitle(true)
-                    .statusTemplate("{emoji} {title} - {artist}")
+                    .statusTemplate("{title} - {artist}")
                     .createdAt(java.time.LocalDateTime.now())
                     .updatedAt(java.time.LocalDateTime.now())
                     .build();

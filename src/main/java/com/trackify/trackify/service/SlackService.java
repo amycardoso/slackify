@@ -91,9 +91,9 @@ public class SlackService {
     private String buildStatusText(UserSettings settings, String songTitle, String artist) {
         String template = settings.getStatusTemplate();
 
-        // Replace placeholders in template
+        // Replace placeholders in template (emoji is set separately via statusEmoji field)
         String text = template
-                .replace("{emoji}", settings.getDefaultEmoji())
+                .replace("{emoji}", "")
                 .replace("{title}", settings.isShowSongTitle() ? songTitle : "")
                 .replace("{artist}", settings.isShowArtist() ? artist : "");
 
