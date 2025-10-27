@@ -16,4 +16,7 @@ public class SpotifyConfig {
 
     @Value("${spotify.redirect-uri}")
     private String redirectUri;
+
+    @Value("${spotify.oauth.scope}")
+    private String scope;
 }

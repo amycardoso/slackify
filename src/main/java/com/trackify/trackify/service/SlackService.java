@@ -5,6 +5,7 @@ import com.slack.api.methods.SlackApiException;
 import com.slack.api.methods.request.users.profile.UsersProfileSetRequest;
 import com.slack.api.methods.response.users.profile.UsersProfileSetResponse;
 import com.slack.api.model.User.Profile;
+import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.model.User;
 import com.trackify.trackify.model.UserSettings;
 import lombok.RequiredArgsConstructor;
@@ -24,13 +25,13 @@ public class SlackService {
     private final com.slack.api.Slack slack = com.slack.api.Slack.getInstance();
 
     @Retryable(
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 1000, multiplier = 2)
+            maxAttemptsExpression = "${trackify.retry.max-attempts}",
+            backoff = @Backoff(delayExpression = "${trackify.retry.backoff-delay}", multiplier = 2)
     )
     public void updateUserStatus(User user, String songTitle, String artist) {
         try {
             UserSettings settings = userService.getUserSettings(user.getId())
-                    .orElseThrow(() -> new RuntimeException("User settings not found"));
+                    .orElseThrow(() -> new RuntimeException(AppConstants.ERROR_USER_SETTINGS_NOT_FOUND));
 
             if (!settings.isSyncEnabled()) {
                 log.debug("Sync disabled for user {}, skipping status update", user.getSlackUserId());
@@ -43,20 +44,15 @@ public class SlackService {
             setSlackStatus(user.getSlackAccessToken(), statusText, statusEmoji);
 
             log.info("Updated Slack status for user {}: {}", user.getSlackUserId(), statusText);
-
-            if (settings.isNotificationsEnabled()) {
-                // Optional: Send a DM notification to the user
-                // This can be implemented if needed
-            }
         } catch (Exception e) {
             log.error("Error updating Slack status for user {}", user.getSlackUserId(), e);
-            throw new RuntimeException("Failed to update Slack status", e);
+            throw new RuntimeException(AppConstants.ERROR_FAILED_TO_UPDATE_SLACK_STATUS, e);
         }
     }
 
     @Retryable(
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 1000, multiplier = 2)
+            maxAttemptsExpression = "${trackify.retry.max-attempts}",
+            backoff = @Backoff(delayExpression = "${trackify.retry.backoff-delay}", multiplier = 2)
     )
     public void clearUserStatus(User user) {
         try {
@@ -64,7 +60,7 @@ public class SlackService {
             log.info("Cleared Slack status for user {}", user.getSlackUserId());
         } catch (Exception e) {
             log.error("Error clearing Slack status for user {}", user.getSlackUserId(), e);
-            throw new RuntimeException("Failed to clear Slack status", e);
+            throw new RuntimeException(AppConstants.ERROR_FAILED_TO_CLEAR_SLACK_STATUS, e);
         }
     }
 
@@ -93,9 +89,9 @@ public class SlackService {
 
         // Replace placeholders in template (emoji is set separately via statusEmoji field)
         String text = template
-                .replace("{emoji}", "")
-                .replace("{title}", settings.isShowSongTitle() ? songTitle : "")
-                .replace("{artist}", settings.isShowArtist() ? artist : "");
+                .replace(AppConstants.PLACEHOLDER_EMOJI, "")
+                .replace(AppConstants.PLACEHOLDER_TITLE, settings.isShowSongTitle() ? songTitle : "")
+                .replace(AppConstants.PLACEHOLDER_ARTIST, settings.isShowArtist() ? artist : "");
 
         // Clean up extra spaces and dashes
         text = text.replaceAll("\\s+-\\s+$", "")
@@ -122,7 +118,7 @@ public class SlackService {
             return response.getTs();
         } catch (Exception e) {
             log.error("Error sending Slack message", e);
-            throw new RuntimeException("Failed to send Slack message", e);
+            throw new RuntimeException(AppConstants.ERROR_FAILED_TO_SEND_SLACK_MESSAGE, e);
         }
     }
 }

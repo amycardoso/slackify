@@ -1,6 +1,6 @@
 package com.trackify.trackify.controller;
 
-import com.trackify.trackify.config.SpotifyConfig;
+import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.service.SpotifyService;
 import com.trackify.trackify.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -22,18 +22,17 @@ public class OAuthController {
 
     private final UserService userService;
     private final SpotifyService spotifyService;
-    private final SpotifyConfig spotifyConfig;
-
-    // Slack OAuth is now handled by Bolt at /slack/install and /slack/oauth_redirect
 
     @GetMapping("/spotify")
     public RedirectView initiateSpotifyOAuth(@RequestParam("userId") String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            log.warn("Spotify OAuth initiated without userId");
+            return new RedirectView(AppConstants.ERROR_PATH + "?message=" + AppConstants.ERROR_PARAM_INVALID_USER);
+        }
+
         log.info("Initiating Spotify OAuth flow for user: {}", userId);
 
         URI authUri = spotifyService.getAuthorizationUri();
-
-        // In a real implementation, you'd want to store the userId in session or state parameter
-        // For simplicity, we're using a query parameter (not recommended for production)
         String redirectUrl = authUri.toString() + "&state=" + userId;
 
         return new RedirectView(redirectUrl);
@@ -46,7 +45,12 @@ public class OAuthController {
         try {
             if (error != null) {
                 log.error("Spotify OAuth error: {}", error);
-                return "redirect:/error?message=spotify_auth_denied";
+                return "redirect:" + AppConstants.ERROR_PATH + "?message=" + AppConstants.ERROR_PARAM_SPOTIFY_DENIED;
+            }
+
+            if (userId == null || userId.trim().isEmpty()) {
+                log.error("Spotify OAuth callback received without userId");
+                return "redirect:" + AppConstants.ERROR_PATH + "?message=" + AppConstants.ERROR_PARAM_INVALID_USER;
             }
 
             log.info("Received Spotify OAuth callback for user: {}", userId);
@@ -54,8 +58,8 @@ public class OAuthController {
             // Exchange code for access token
             AuthorizationCodeCredentials credentials = spotifyService.getAccessToken(code);
 
-            // Get Spotify user ID (in a real implementation, fetch from Spotify API)
-            String spotifyUserId = "spotify_user_" + System.currentTimeMillis();
+            // Generate temporary Spotify user ID (will be updated on first sync)
+            String spotifyUserId = AppConstants.SPOTIFY_USER_ID_PREFIX + System.currentTimeMillis();
 
             // Update user with Spotify tokens
             userService.updateSpotifyTokens(
@@ -68,11 +72,11 @@ public class OAuthController {
 
             log.info("Successfully authenticated Spotify for user: {}", userId);
 
-            return "redirect:/success";
+            return "redirect:" + AppConstants.SUCCESS_PATH;
 
         } catch (Exception e) {
             log.error("Error handling Spotify OAuth callback", e);
-            return "redirect:/error?message=spotify_auth_error";
+            return "redirect:" + AppConstants.ERROR_PATH + "?message=" + AppConstants.ERROR_PARAM_SPOTIFY_ERROR;
         }
     }
 }

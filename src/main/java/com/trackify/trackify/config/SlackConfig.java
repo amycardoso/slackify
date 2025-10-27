@@ -7,6 +7,7 @@ import com.slack.api.bolt.service.builtin.oauth.OAuthErrorHandler;
 import com.slack.api.bolt.service.builtin.oauth.OAuthV2SuccessHandler;
 import com.slack.api.bolt.request.builtin.OAuthCallbackRequest;
 import com.slack.api.methods.response.oauth.OAuthV2AccessResponse;
+import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.service.MongoDBInstallationService;
 import com.trackify.trackify.service.MongoDBOAuthStateService;
 import com.trackify.trackify.service.OAuthTemplateService;
@@ -28,16 +29,28 @@ public class SlackConfig {
     @Value("${slack.signing-secret}")
     private String signingSecret;
 
+    @Value("${slack.oauth.bot-scope}")
+    private String botScope;
+
+    @Value("${slack.oauth.user-scope}")
+    private String userScope;
+
+    @Value("${slack.oauth.install-path}")
+    private String installPath;
+
+    @Value("${slack.oauth.redirect-path}")
+    private String redirectPath;
+
     @Bean
     public AppConfig appConfig() {
         return AppConfig.builder()
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .signingSecret(signingSecret)
-                .scope("commands")
-                .userScope("users.profile:read,users.profile:write")
-                .oauthInstallPath("/slack/install")
-                .oauthRedirectUriPath("/slack/oauth_redirect")
+                .scope(botScope)
+                .userScope(userScope)
+                .oauthInstallPath(installPath)
+                .oauthRedirectUriPath(redirectPath)
                 .build();
     }
 
@@ -92,7 +105,7 @@ public class SlackConfig {
                 }
 
                 // Generate Spotify OAuth link with userId
-                String spotifyAuthLink = "/oauth/spotify?userId=" + userId;
+                String spotifyAuthLink = AppConstants.OAUTH_SPOTIFY_PATH + "?userId=" + userId;
                 String successHtml = templateService.renderSuccess(spotifyAuthLink);
 
                 return com.slack.api.bolt.response.Response.builder()
@@ -138,7 +151,7 @@ public class SlackConfig {
                 clientId != null && !clientId.isEmpty() ? "present" : "missing",
                 signingSecret != null && !signingSecret.isEmpty());
         log.info("Using MongoDB-based InstallationService and OAuthStateService");
-        log.info("Bolt OAuth endpoints configured: /slack/install, /slack/oauth_redirect");
+        log.info("Bolt OAuth endpoints configured: {}, {}", installPath, redirectPath);
 
         return app;
     }

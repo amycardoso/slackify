@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -245,7 +245,7 @@
                 <span class="logo-icon">♫</span>Trackify
             </h1>
             <p class="subtitle">Sync your currently playing music with your Slack status</p>
-            <a href="/slack/install" class="cta-button">Get Started - Connect with Slack</a>
+            <a th:href="@{/slack/install}" class="cta-button">Get Started - Connect with Slack</a>
         </div>
 
         <!-- Gradient Divider -->

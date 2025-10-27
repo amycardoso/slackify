@@ -1,7 +1,8 @@
 package com.trackify.trackify.service;
 
+import com.trackify.trackify.constants.AppConstants;
+import com.trackify.trackify.model.CurrentlyPlayingTrackInfo;
 import com.trackify.trackify.model.User;
-import com.trackify.trackify.service.SpotifyService.CurrentlyPlayingTrackInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -106,7 +107,7 @@ public class MusicSyncService {
         log.info("Manual sync requested for user {}", userId);
 
         User user = userService.findBySlackUserId(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException(AppConstants.ERROR_USER_NOT_FOUND));
 
         syncUserMusicStatus(user);
     }

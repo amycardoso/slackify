@@ -1,7 +1,9 @@
 package com.trackify.trackify.service;
 
 import com.trackify.trackify.config.SpotifyConfig;
+import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.exception.*;
+import com.trackify.trackify.model.CurrentlyPlayingTrackInfo;
 import com.trackify.trackify.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,20 +11,16 @@ import org.apache.hc.core5.http.ParseException;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
-import se.michaelthelin.spotify.exceptions.detailed.*;
-import se.michaelthelin.spotify.exceptions.detailed.NotFoundException;
-import se.michaelthelin.spotify.exceptions.detailed.UnauthorizedException;
 import se.michaelthelin.spotify.exceptions.detailed.ForbiddenException;
+import se.michaelthelin.spotify.exceptions.detailed.NotFoundException;
 import se.michaelthelin.spotify.exceptions.detailed.TooManyRequestsException;
+import se.michaelthelin.spotify.exceptions.detailed.UnauthorizedException;
 import se.michaelthelin.spotify.model_objects.credentials.AuthorizationCodeCredentials;
 import se.michaelthelin.spotify.model_objects.miscellaneous.CurrentlyPlaying;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRefreshRequest;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRequest;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeUriRequest;
-import se.michaelthelin.spotify.requests.data.player.GetUsersCurrentlyPlayingTrackRequest;
-import se.michaelthelin.spotify.requests.data.player.PauseUsersPlaybackRequest;
-import se.michaelthelin.spotify.requests.data.player.StartResumeUsersPlaybackRequest;
 
 import java.io.IOException;
 import java.net.URI;
@@ -39,7 +37,7 @@ public class SpotifyService {
         SpotifyApi spotifyApi = getSpotifyApi(null);
 
         AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi.authorizationCodeUri()
-                .scope("user-read-currently-playing,user-read-playback-state,user-modify-playback-state")
+                .scope(spotifyConfig.getScope())
                 .show_dialog(true)
                 .build();
 
@@ -85,7 +83,7 @@ public class SpotifyService {
 
             if (currentlyPlaying.getItem() instanceof Track) {
                 Track track = (Track) currentlyPlaying.getItem();
-                String artistName = track.getArtists().length > 0 ? track.getArtists()[0].getName() : "Unknown Artist";
+                String artistName = track.getArtists().length > 0 ? track.getArtists()[0].getName() : AppConstants.UNKNOWN_ARTIST;
 
                 return CurrentlyPlayingTrackInfo.builder()
                         .trackId(track.getId())
@@ -172,14 +170,5 @@ public class SpotifyService {
         }
 
         return builder.build();
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class CurrentlyPlayingTrackInfo {
-        private String trackId;
-        private String trackName;
-        private String artistName;
-        private boolean isPlaying;
     }
 }

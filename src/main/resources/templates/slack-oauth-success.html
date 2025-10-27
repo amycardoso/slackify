@@ -1,184 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Slack Connected - Trackify</title>
-    <style>
-        :root {
-            --spotify-green: #1DB954;
-            --slack-purple: #4A154B;
-            --bg-dark: #121212;
-            --bg-card: #181818;
-            --text-white: #FFFFFF;
-            --text-gray: #B3B3B3;
-            --hover-bg: #282828;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-white);
-            line-height: 1.6;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 48px 40px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .logo {
-            font-size: 48px;
-            font-weight: 900;
-            margin-bottom: 16px;
-            background: linear-gradient(135deg, var(--spotify-green) 0%, var(--slack-purple) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            letter-spacing: -2px;
-        }
-
-        .logo-icon {
-            display: inline-block;
-            margin-right: 8px;
-        }
-
-        .success-icon {
-            font-size: 64px;
-            margin-bottom: 24px;
-            animation: scaleIn 0.5s ease-out 0.3s both;
-        }
-
-        @keyframes scaleIn {
-            from {
-                transform: scale(0);
-            }
-            to {
-                transform: scale(1);
-            }
-        }
-
-        h1 {
-            font-size: 28px;
-            margin-bottom: 16px;
-            color: var(--spotify-green);
-            font-weight: 900;
-        }
-
-        p {
-            color: var(--text-gray);
-            line-height: 1.6;
-            margin-bottom: 12px;
-            font-size: 15px;
-        }
-
-        .steps {
-            background: rgba(29, 185, 84, 0.1);
-            border-left: 4px solid var(--spotify-green);
-            padding: 20px;
-            border-radius: 8px;
-            margin: 24px 0;
-            text-align: left;
-        }
-
-        .step {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-            color: var(--text-white);
-            font-size: 15px;
-        }
-
-        .step:last-child {
-            margin-bottom: 0;
-        }
-
-        .step-icon {
-            margin-right: 12px;
-            font-size: 20px;
-            min-width: 24px;
-        }
-
-        .cta-button {
-            display: inline-block;
-            padding: 14px 32px;
-            background: var(--spotify-green);
-            color: var(--text-white);
-            text-decoration: none;
-            border-radius: 500px;
-            margin-top: 24px;
-            font-weight: 700;
-            font-size: 14px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 24px rgba(29, 185, 84, 0.3);
-        }
-
-        .cta-button:hover {
-            background: #1ed760;
-            transform: scale(1.05);
-            box-shadow: 0 12px 32px rgba(29, 185, 84, 0.4);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 32px 24px;
-            }
-
-            .logo {
-                font-size: 40px;
-            }
-
-            h1 {
-                font-size: 24px;
-            }
-
-            .success-icon {
-                font-size: 56px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
 </head>
-<body>
-    <div class="container">
+<body class="centered-container">
+    <div class="card">
         <div class="logo">
             <span class="logo-icon">🎵</span>Trackify
         </div>
-        <div class="success-icon">✅</div>
-        <h1>Slack Connected!</h1>
+        <div class="icon-large success-icon">✅</div>
+        <h1 class="success-title">Slack Connected!</h1>
         <p>Trackify has been successfully installed to your workspace.</p>
 
-        <div class="steps">
+        <div class="success-steps message-box">
             <div class="step">
                 <span class="step-icon">✅</span>
                 <span><strong>Step 1:</strong> Slack Connected</span>
@@ -190,7 +27,8 @@
         </div>
 
         <p>Now connect your Spotify account to start syncing your music with your Slack status!</p>
-        <a href="{{SPOTIFY_AUTH_LINK}}" class="cta-button">Connect Spotify</a>
+        <!-- Note: SPOTIFY_AUTH_LINK is replaced by OAuthTemplateService.renderSuccess() -->
+        <a th:href="${spotifyAuthLink}" class="cta-button">Connect Spotify</a>
     </div>
 </body>
 </html>

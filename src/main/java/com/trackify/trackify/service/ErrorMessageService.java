@@ -1,5 +1,6 @@
 package com.trackify.trackify.service;
 
+import com.trackify.trackify.constants.AppConstants;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -81,8 +82,8 @@ public class ErrorMessageService {
 
                 You haven't connected your Spotify account yet.
 
-                Get started at: /slack/install
-                """;
+                Get started at: %s
+                """.formatted(AppConstants.SLACK_INSTALL_PATH);
     }
 
     public String buildReconnectInstructions(String reconnectUrl) {

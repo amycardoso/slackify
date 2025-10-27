@@ -1,0 +1,233 @@
+:root {
+    --spotify-green: #1DB954;
+    --spotify-green-hover: #1ed760;
+    --slack-purple: #4A154B;
+    --error-red: #E22134;
+    --bg-dark: #121212;
+    --bg-card: #181818;
+    --text-white: #FFFFFF;
+    --text-gray: #B3B3B3;
+    --hover-bg: #282828;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-white);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* Container styles */
+.centered-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 48px 40px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.6s ease-out;
+}
+
+/* Logo */
+.logo {
+    font-size: 48px;
+    font-weight: 900;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--spotify-green) 0%, var(--slack-purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -2px;
+}
+
+.logo-icon {
+    display: inline-block;
+    margin-right: 8px;
+}
+
+/* Icons */
+.icon-large {
+    font-size: 64px;
+    margin-bottom: 24px;
+}
+
+.success-icon {
+    animation: scaleIn 0.5s ease-out 0.3s both;
+}
+
+.error-icon {
+    animation: shake 0.5s ease-out 0.2s both;
+}
+
+/* Headings */
+h1 {
+    font-size: 28px;
+    margin-bottom: 16px;
+    font-weight: 900;
+}
+
+h1.success-title {
+    color: var(--spotify-green);
+}
+
+h1.error-title {
+    color: var(--error-red);
+}
+
+h1.gradient-title {
+    background: linear-gradient(135deg, var(--spotify-green) 0%, var(--slack-purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Paragraphs */
+p {
+    color: var(--text-gray);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    font-size: 15px;
+}
+
+/* Message boxes */
+.message-box {
+    padding: 16px;
+    border-radius: 8px;
+    margin: 24px 0;
+    text-align: left;
+}
+
+.message-box p {
+    color: var(--text-white);
+    margin: 0;
+}
+
+.error-message {
+    background: rgba(226, 33, 52, 0.1);
+    border-left: 4px solid var(--error-red);
+}
+
+.error-message p {
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.success-steps {
+    background: rgba(29, 185, 84, 0.1);
+    border-left: 4px solid var(--spotify-green);
+    padding: 20px;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    color: var(--text-white);
+    font-size: 15px;
+}
+
+.step:last-child {
+    margin-bottom: 0;
+}
+
+.step-icon {
+    margin-right: 12px;
+    font-size: 20px;
+    min-width: 24px;
+}
+
+/* Buttons */
+.button, .cta-button {
+    display: inline-block;
+    padding: 14px 32px;
+    background: var(--spotify-green);
+    color: var(--text-white);
+    text-decoration: none;
+    border-radius: 500px;
+    margin-top: 24px;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 24px rgba(29, 185, 84, 0.3);
+}
+
+.button:hover, .cta-button:hover {
+    background: var(--spotify-green-hover);
+    transform: scale(1.05);
+    box-shadow: 0 12px 32px rgba(29, 185, 84, 0.4);
+}
+
+/* Code */
+code {
+    background: rgba(29, 185, 84, 0.1);
+    color: var(--spotify-green);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    font-size: 14px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .card {
+        padding: 32px 24px;
+    }
+
+    .logo {
+        font-size: 40px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    .icon-large {
+        font-size: 56px;
+    }
+}
