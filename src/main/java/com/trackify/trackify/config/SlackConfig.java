@@ -8,6 +8,7 @@ import com.slack.api.bolt.request.builtin.OAuthCallbackRequest;
 import com.slack.api.methods.response.oauth.OAuthV2AccessResponse;
 import com.trackify.trackify.service.MongoDBInstallationService;
 import com.trackify.trackify.service.MongoDBOAuthStateService;
+import com.trackify.trackify.service.OAuthTemplateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -43,7 +44,8 @@ public class SlackConfig {
     public App slackApp(
             AppConfig appConfig,
             MongoDBInstallationService installationService,
-            MongoDBOAuthStateService oauthStateService) {
+            MongoDBOAuthStateService oauthStateService,
+            OAuthTemplateService templateService) {
 
         App app = new App(appConfig);
 
@@ -64,26 +66,26 @@ public class SlackConfig {
 
             if (userId == null) {
                 log.error("Could not find user after OAuth completion for slackUserId: {}", slackUserId);
+                String errorHtml = templateService.renderError(
+                        "Installation Error",
+                        "Something went wrong during the installation process.",
+                        "User account not found after OAuth completion."
+                );
                 return com.slack.api.bolt.response.Response.builder()
                         .statusCode(500)
                         .contentType("text/html")
-                        .body("<html><body><h1>Error</h1>" +
-                              "<p>Installation completed but user not found. Please try again.</p>" +
-                              "</body></html>")
+                        .body(errorHtml)
                         .build();
             }
 
             // Generate Spotify OAuth link with userId
             String spotifyAuthLink = "/oauth/spotify?userId=" + userId;
+            String successHtml = templateService.renderSuccess(spotifyAuthLink);
 
             return com.slack.api.bolt.response.Response.builder()
                     .statusCode(200)
                     .contentType("text/html")
-                    .body("<html><body><h1>Slack Connected!</h1>" +
-                          "<p>Trackify has been installed to your workspace.</p>" +
-                          "<p><strong>Next step:</strong> Connect your Spotify account to enable music sync.</p>" +
-                          "<p><a href='" + spotifyAuthLink + "' style='display: inline-block; padding: 10px 20px; background: #1DB954; color: white; text-decoration: none; border-radius: 5px;'>Connect Spotify</a></p>" +
-                          "</body></html>")
+                    .body(successHtml)
                     .build();
         });
 
@@ -91,13 +93,17 @@ public class SlackConfig {
         app.oauthCallbackError((OAuthErrorHandler) (req, resp) -> {
             String error = req.getPayload().getError();
             log.error("Slack OAuth error: {}", error);
+
+            String errorHtml = templateService.renderError(
+                    "Installation Failed",
+                    "The Slack app installation could not be completed.",
+                    "Error: " + (error != null ? error : "Unknown error")
+            );
+
             return com.slack.api.bolt.response.Response.builder()
                     .statusCode(200)
                     .contentType("text/html")
-                    .body("<html><body><h1>Installation Failed</h1>" +
-                          "<p>The Slack app installation failed.</p>" +
-                          "<p>Error: " + (error != null ? error : "Unknown") + "</p>" +
-                          "</body></html>")
+                    .body(errorHtml)
                     .build();
         });
 
