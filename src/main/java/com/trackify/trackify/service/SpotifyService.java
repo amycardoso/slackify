@@ -1,6 +1,7 @@
 package com.trackify.trackify.service;
 
 import com.trackify.trackify.config.SpotifyConfig;
+import com.trackify.trackify.exception.*;
 import com.trackify.trackify.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,11 @@ import org.apache.hc.core5.http.ParseException;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
+import se.michaelthelin.spotify.exceptions.detailed.*;
+import se.michaelthelin.spotify.exceptions.detailed.NotFoundException;
+import se.michaelthelin.spotify.exceptions.detailed.UnauthorizedException;
+import se.michaelthelin.spotify.exceptions.detailed.ForbiddenException;
+import se.michaelthelin.spotify.exceptions.detailed.TooManyRequestsException;
 import se.michaelthelin.spotify.model_objects.credentials.AuthorizationCodeCredentials;
 import se.michaelthelin.spotify.model_objects.miscellaneous.CurrentlyPlaying;
 import se.michaelthelin.spotify.model_objects.specification.Track;
@@ -96,22 +102,50 @@ public class SpotifyService {
         }
     }
 
-    public void pausePlayback(User user) throws IOException, ParseException, SpotifyWebApiException {
-        String accessToken = userService.getDecryptedSpotifyAccessToken(user);
-        SpotifyApi spotifyApi = getSpotifyApi(accessToken);
-
-        PauseUsersPlaybackRequest request = spotifyApi.pauseUsersPlayback().build();
-        request.execute();
-        log.info("Paused playback for user {}", user.getSlackUserId());
+    public void pausePlayback(User user) {
+        executePlayerCommand(user, "pause", () -> {
+            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
+            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+            spotifyApi.pauseUsersPlayback().build().execute();
+        });
     }
 
-    public void resumePlayback(User user) throws IOException, ParseException, SpotifyWebApiException {
-        String accessToken = userService.getDecryptedSpotifyAccessToken(user);
-        SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+    public void resumePlayback(User user) {
+        executePlayerCommand(user, "resume", () -> {
+            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
+            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+            spotifyApi.startResumeUsersPlayback().build().execute();
+        });
+    }
 
-        StartResumeUsersPlaybackRequest request = spotifyApi.startResumeUsersPlayback().build();
-        request.execute();
-        log.info("Resumed playback for user {}", user.getSlackUserId());
+    private void executePlayerCommand(User user, String operation, PlayerCommand command) {
+        try {
+            command.execute();
+            log.info("{}d playback for user {}", operation, user.getSlackUserId());
+        } catch (NotFoundException e) {
+            log.warn("No active device found for user {}", user.getSlackUserId());
+            throw new NoActiveDeviceException();
+        } catch (UnauthorizedException e) {
+            log.warn("Unauthorized - token expired for user {}", user.getSlackUserId());
+            throw new SpotifyTokenExpiredException();
+        } catch (ForbiddenException e) {
+            log.warn("Forbidden - Premium required for user {}", user.getSlackUserId());
+            throw new SpotifyPremiumRequiredException();
+        } catch (TooManyRequestsException e) {
+            log.warn("Rate limited for user {}", user.getSlackUserId());
+            throw new SpotifyRateLimitException();
+        } catch (SpotifyWebApiException e) {
+            log.error("Spotify API error {}ing playback for user {}: {}", operation, user.getSlackUserId(), e.getMessage(), e);
+            throw new SpotifyException("Spotify API error: " + e.getMessage(), e);
+        } catch (IOException | ParseException e) {
+            log.error("Network error {}ing playback for user {}", operation, user.getSlackUserId(), e);
+            throw new SpotifyException("Network error communicating with Spotify", e);
+        }
+    }
+
+    @FunctionalInterface
+    private interface PlayerCommand {
+        void execute() throws IOException, ParseException, SpotifyWebApiException;
     }
 
     private void refreshUserToken(User user) throws IOException, ParseException, SpotifyWebApiException {

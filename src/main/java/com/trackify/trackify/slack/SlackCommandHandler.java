@@ -4,8 +4,10 @@ import com.slack.api.bolt.App;
 import com.slack.api.bolt.context.builtin.SlashCommandContext;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;
 import com.slack.api.bolt.response.Response;
+import com.trackify.trackify.exception.*;
 import com.trackify.trackify.model.User;
 import com.trackify.trackify.model.UserSettings;
+import com.trackify.trackify.service.ErrorMessageService;
 import com.trackify.trackify.service.MusicSyncService;
 import com.trackify.trackify.service.SpotifyService;
 import com.trackify.trackify.service.UserService;
@@ -25,6 +27,7 @@ public class SlackCommandHandler {
     private final UserService userService;
     private final SpotifyService spotifyService;
     private final MusicSyncService musicSyncService;
+    private final ErrorMessageService errorMessageService;
 
     @PostConstruct
     public void registerCommands() {
@@ -44,6 +47,7 @@ public class SlackCommandHandler {
                 case "sync" -> handleSync(req, ctx);
                 case "enable" -> handleEnable(req, ctx);
                 case "disable" -> handleDisable(req, ctx);
+                case "reconnect" -> handleReconnect(req, ctx);
                 case "help" -> handleHelp(req, ctx);
                 default -> handleHelp(req, ctx);
             };
@@ -58,20 +62,31 @@ public class SlackCommandHandler {
             Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
 
             if (userOpt.isEmpty()) {
-                return ctx.ack(":x: You need to connect your Spotify account first. Visit /slack/install to get started.");
+                return ctx.ack(errorMessageService.buildNotConnectedMessage());
             }
 
             User user = userOpt.get();
             if (user.getEncryptedSpotifyAccessToken() == null) {
-                return ctx.ack(":x: Your Spotify account is not connected. Please re-authorize.");
+                return ctx.ack(errorMessageService.buildNotConnectedMessage());
             }
 
             spotifyService.resumePlayback(user);
             return ctx.ack(":arrow_forward: Playback resumed!");
 
+        } catch (NoActiveDeviceException e) {
+            return ctx.ack(errorMessageService.buildNoDeviceMessage());
+        } catch (SpotifyTokenExpiredException e) {
+            return ctx.ack(errorMessageService.buildTokenExpiredMessage(req.getPayload().getUserId()));
+        } catch (SpotifyPremiumRequiredException e) {
+            return ctx.ack(errorMessageService.buildPremiumRequiredMessage());
+        } catch (SpotifyRateLimitException e) {
+            return ctx.ack(errorMessageService.buildRateLimitMessage());
+        } catch (SpotifyException e) {
+            log.error("Spotify error handling play command", e);
+            return ctx.ack(errorMessageService.buildNetworkErrorMessage());
         } catch (Exception e) {
-            log.error("Error handling play command", e);
-            return ctx.ack(":x: Failed to resume playback. Error: " + e.getMessage());
+            log.error("Unexpected error handling play command", e);
+            return ctx.ack(errorMessageService.buildGenericErrorMessage());
         }
     }
 
@@ -81,20 +96,31 @@ public class SlackCommandHandler {
             Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
 
             if (userOpt.isEmpty()) {
-                return ctx.ack(":x: You need to connect your Spotify account first. Visit /slack/install to get started.");
+                return ctx.ack(errorMessageService.buildNotConnectedMessage());
             }
 
             User user = userOpt.get();
             if (user.getEncryptedSpotifyAccessToken() == null) {
-                return ctx.ack(":x: Your Spotify account is not connected. Please re-authorize.");
+                return ctx.ack(errorMessageService.buildNotConnectedMessage());
             }
 
             spotifyService.pausePlayback(user);
             return ctx.ack(":pause_button: Playback paused!");
 
+        } catch (NoActiveDeviceException e) {
+            return ctx.ack(errorMessageService.buildNoDeviceMessage());
+        } catch (SpotifyTokenExpiredException e) {
+            return ctx.ack(errorMessageService.buildTokenExpiredMessage(req.getPayload().getUserId()));
+        } catch (SpotifyPremiumRequiredException e) {
+            return ctx.ack(errorMessageService.buildPremiumRequiredMessage());
+        } catch (SpotifyRateLimitException e) {
+            return ctx.ack(errorMessageService.buildRateLimitMessage());
+        } catch (SpotifyException e) {
+            log.error("Spotify error handling pause command", e);
+            return ctx.ack(errorMessageService.buildNetworkErrorMessage());
         } catch (Exception e) {
-            log.error("Error handling pause command", e);
-            return ctx.ack(":x: Failed to pause playback. Error: " + e.getMessage());
+            log.error("Unexpected error handling pause command", e);
+            return ctx.ack(errorMessageService.buildGenericErrorMessage());
         }
     }
 
@@ -193,6 +219,26 @@ public class SlackCommandHandler {
         }
     }
 
+    private Response handleReconnect(SlashCommandRequest req, SlashCommandContext ctx) {
+        try {
+            String slackUserId = req.getPayload().getUserId();
+            Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
+
+            if (userOpt.isEmpty()) {
+                return ctx.ack(errorMessageService.buildNotConnectedMessage());
+            }
+
+            User user = userOpt.get();
+            String reconnectUrl = "/oauth/spotify?userId=" + user.getId();
+
+            return ctx.ack(errorMessageService.buildReconnectInstructions(reconnectUrl));
+
+        } catch (Exception e) {
+            log.error("Error handling reconnect command", e);
+            return ctx.ack(errorMessageService.buildGenericErrorMessage());
+        }
+    }
+
     private Response handleHelp(SlashCommandRequest req, SlashCommandContext ctx) {
         String helpMessage = """
                 :musical_note: *Trackify Commands*
@@ -203,6 +249,7 @@ public class SlackCommandHandler {
                 `/trackify sync` - Manually trigger music sync
                 `/trackify enable` - Enable automatic music sync
                 `/trackify disable` - Disable automatic music sync
+                `/trackify reconnect` - Reconnect your Spotify account
                 `/trackify help` - Show this help message
 
                 :link: To get started, connect your accounts at: /slack/install
@@ -213,7 +260,7 @@ public class SlackCommandHandler {
 
     private String buildStatusMessage(User user, UserSettings settings) {
         StringBuilder message = new StringBuilder();
-        message.append(":musical_note: *Your Trackify Status*\n\n");
+        message.append("*Your Trackify Status*\n\n");
 
         // Sync status
         message.append("*Sync Status:* ");
