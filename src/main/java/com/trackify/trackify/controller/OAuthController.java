@@ -25,6 +25,11 @@ public class OAuthController {
 
     @GetMapping("/spotify")
     public RedirectView initiateSpotifyOAuth(@RequestParam("userId") String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            log.warn("Spotify OAuth initiated without userId");
+            return new RedirectView("/error?message=invalid_user_id");
+        }
+
         log.info("Initiating Spotify OAuth flow for user: {}", userId);
 
         URI authUri = spotifyService.getAuthorizationUri();
@@ -41,6 +46,11 @@ public class OAuthController {
             if (error != null) {
                 log.error("Spotify OAuth error: {}", error);
                 return "redirect:/error?message=spotify_auth_denied";
+            }
+
+            if (userId == null || userId.trim().isEmpty()) {
+                log.error("Spotify OAuth callback received without userId");
+                return "redirect:/error?message=invalid_user_id";
             }
 
             log.info("Received Spotify OAuth callback for user: {}", userId);
