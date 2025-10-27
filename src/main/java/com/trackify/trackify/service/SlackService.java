@@ -24,8 +24,8 @@ public class SlackService {
     private final com.slack.api.Slack slack = com.slack.api.Slack.getInstance();
 
     @Retryable(
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 1000, multiplier = 2)
+            maxAttemptsExpression = "${trackify.retry.max-attempts}",
+            backoff = @Backoff(delayExpression = "${trackify.retry.backoff-delay}", multiplier = 2)
     )
     public void updateUserStatus(User user, String songTitle, String artist) {
         try {
@@ -55,8 +55,8 @@ public class SlackService {
     }
 
     @Retryable(
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 1000, multiplier = 2)
+            maxAttemptsExpression = "${trackify.retry.max-attempts}",
+            backoff = @Backoff(delayExpression = "${trackify.retry.backoff-delay}", multiplier = 2)
     )
     public void clearUserStatus(User user) {
         try {
