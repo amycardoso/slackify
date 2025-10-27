@@ -103,13 +103,25 @@ public class SpotifyService {
     }
 
     public void pausePlayback(User user) {
-        try {
+        executePlayerCommand(user, "pause", () -> {
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
             SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+            spotifyApi.pauseUsersPlayback().build().execute();
+        });
+    }
 
-            PauseUsersPlaybackRequest request = spotifyApi.pauseUsersPlayback().build();
-            request.execute();
-            log.info("Paused playback for user {}", user.getSlackUserId());
+    public void resumePlayback(User user) {
+        executePlayerCommand(user, "resume", () -> {
+            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
+            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+            spotifyApi.startResumeUsersPlayback().build().execute();
+        });
+    }
+
+    private void executePlayerCommand(User user, String operation, PlayerCommand command) {
+        try {
+            command.execute();
+            log.info("{}d playback for user {}", operation, user.getSlackUserId());
         } catch (NotFoundException e) {
             log.warn("No active device found for user {}", user.getSlackUserId());
             throw new NoActiveDeviceException();
@@ -123,41 +135,17 @@ public class SpotifyService {
             log.warn("Rate limited for user {}", user.getSlackUserId());
             throw new SpotifyRateLimitException();
         } catch (SpotifyWebApiException e) {
-            log.error("Spotify API error pausing playback for user {}: {}", user.getSlackUserId(), e.getMessage(), e);
+            log.error("Spotify API error {}ing playback for user {}: {}", operation, user.getSlackUserId(), e.getMessage(), e);
             throw new SpotifyException("Spotify API error: " + e.getMessage(), e);
         } catch (IOException | ParseException e) {
-            log.error("Network error pausing playback for user {}", user.getSlackUserId(), e);
+            log.error("Network error {}ing playback for user {}", operation, user.getSlackUserId(), e);
             throw new SpotifyException("Network error communicating with Spotify", e);
         }
     }
 
-    public void resumePlayback(User user) {
-        try {
-            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
-            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
-
-            StartResumeUsersPlaybackRequest request = spotifyApi.startResumeUsersPlayback().build();
-            request.execute();
-            log.info("Resumed playback for user {}", user.getSlackUserId());
-        } catch (NotFoundException e) {
-            log.warn("No active device found for user {}", user.getSlackUserId());
-            throw new NoActiveDeviceException();
-        } catch (UnauthorizedException e) {
-            log.warn("Unauthorized - token expired for user {}", user.getSlackUserId());
-            throw new SpotifyTokenExpiredException();
-        } catch (ForbiddenException e) {
-            log.warn("Forbidden - Premium required for user {}", user.getSlackUserId());
-            throw new SpotifyPremiumRequiredException();
-        } catch (TooManyRequestsException e) {
-            log.warn("Rate limited for user {}", user.getSlackUserId());
-            throw new SpotifyRateLimitException();
-        } catch (SpotifyWebApiException e) {
-            log.error("Spotify API error resuming playback for user {}: {}", user.getSlackUserId(), e.getMessage(), e);
-            throw new SpotifyException("Spotify API error: " + e.getMessage(), e);
-        } catch (IOException | ParseException e) {
-            log.error("Network error resuming playback for user {}", user.getSlackUserId(), e);
-            throw new SpotifyException("Network error communicating with Spotify", e);
-        }
+    @FunctionalInterface
+    private interface PlayerCommand {
+        void execute() throws IOException, ParseException, SpotifyWebApiException;
     }
 
     private void refreshUserToken(User user) throws IOException, ParseException, SpotifyWebApiException {
