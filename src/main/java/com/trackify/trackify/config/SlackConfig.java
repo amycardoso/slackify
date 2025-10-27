@@ -28,16 +28,28 @@ public class SlackConfig {
     @Value("${slack.signing-secret}")
     private String signingSecret;
 
+    @Value("${slack.oauth.bot-scope}")
+    private String botScope;
+
+    @Value("${slack.oauth.user-scope}")
+    private String userScope;
+
+    @Value("${slack.oauth.install-path}")
+    private String installPath;
+
+    @Value("${slack.oauth.redirect-path}")
+    private String redirectPath;
+
     @Bean
     public AppConfig appConfig() {
         return AppConfig.builder()
                 .clientId(clientId)
                 .clientSecret(clientSecret)
                 .signingSecret(signingSecret)
-                .scope("commands")
-                .userScope("users.profile:read,users.profile:write")
-                .oauthInstallPath("/slack/install")
-                .oauthRedirectUriPath("/slack/oauth_redirect")
+                .scope(botScope)
+                .userScope(userScope)
+                .oauthInstallPath(installPath)
+                .oauthRedirectUriPath(redirectPath)
                 .build();
     }
 
@@ -138,7 +150,7 @@ public class SlackConfig {
                 clientId != null && !clientId.isEmpty() ? "present" : "missing",
                 signingSecret != null && !signingSecret.isEmpty());
         log.info("Using MongoDB-based InstallationService and OAuthStateService");
-        log.info("Bolt OAuth endpoints configured: /slack/install, /slack/oauth_redirect");
+        log.info("Bolt OAuth endpoints configured: {}, {}", installPath, redirectPath);
 
         return app;
     }

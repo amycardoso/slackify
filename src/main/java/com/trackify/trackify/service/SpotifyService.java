@@ -39,7 +39,7 @@ public class SpotifyService {
         SpotifyApi spotifyApi = getSpotifyApi(null);
 
         AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi.authorizationCodeUri()
-                .scope("user-read-currently-playing,user-read-playback-state,user-modify-playback-state")
+                .scope(spotifyConfig.getScope())
                 .show_dialog(true)
                 .build();
 
