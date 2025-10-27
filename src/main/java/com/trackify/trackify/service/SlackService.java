@@ -84,7 +84,7 @@ public class SlackService {
 
         // Set status expiration if provided
         if (statusExpiration != null) {
-            profile.setStatusExpiration(statusExpiration.intValue());
+            profile.setStatusExpiration(statusExpiration);
         }
 
         UsersProfileSetRequest request = UsersProfileSetRequest.builder()
