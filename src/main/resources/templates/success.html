@@ -12,7 +12,7 @@
         <h1 class="gradient-title">You're all set!</h1>
         <p th:text="${message}">Successfully connected! Your music will now sync with your Slack status.</p>
         <p>Go to Slack and try the <code>/trackify</code> commands!</p>
-        <a href="/" class="button">Back to Home</a>
+        <a th:href="@{/}" class="button">Back to Home</a>
     </div>
 </body>
 </html>

@@ -27,7 +27,7 @@ public class OAuthController {
     public RedirectView initiateSpotifyOAuth(@RequestParam("userId") String userId) {
         if (userId == null || userId.trim().isEmpty()) {
             log.warn("Spotify OAuth initiated without userId");
-            return new RedirectView("/error?message=invalid_user_id");
+            return new RedirectView(AppConstants.ERROR_PATH + "?message=" + AppConstants.ERROR_PARAM_INVALID_USER);
         }
 
         log.info("Initiating Spotify OAuth flow for user: {}", userId);
@@ -45,12 +45,12 @@ public class OAuthController {
         try {
             if (error != null) {
                 log.error("Spotify OAuth error: {}", error);
-                return "redirect:/error?message=spotify_auth_denied";
+                return "redirect:" + AppConstants.ERROR_PATH + "?message=" + AppConstants.ERROR_PARAM_SPOTIFY_DENIED;
             }
 
             if (userId == null || userId.trim().isEmpty()) {
                 log.error("Spotify OAuth callback received without userId");
-                return "redirect:/error?message=invalid_user_id";
+                return "redirect:" + AppConstants.ERROR_PATH + "?message=" + AppConstants.ERROR_PARAM_INVALID_USER;
             }
 
             log.info("Received Spotify OAuth callback for user: {}", userId);
@@ -72,11 +72,11 @@ public class OAuthController {
 
             log.info("Successfully authenticated Spotify for user: {}", userId);
 
-            return "redirect:/success";
+            return "redirect:" + AppConstants.SUCCESS_PATH;
 
         } catch (Exception e) {
             log.error("Error handling Spotify OAuth callback", e);
-            return "redirect:/error?message=spotify_auth_error";
+            return "redirect:" + AppConstants.ERROR_PATH + "?message=" + AppConstants.ERROR_PARAM_SPOTIFY_ERROR;
         }
     }
 }

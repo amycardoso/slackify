@@ -4,6 +4,7 @@ import com.slack.api.bolt.App;
 import com.slack.api.bolt.context.builtin.SlashCommandContext;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;
 import com.slack.api.bolt.response.Response;
+import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.exception.*;
 import com.trackify.trackify.model.User;
 import com.trackify.trackify.model.UserSettings;
@@ -78,7 +79,7 @@ public class SlackCommandHandler {
             Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
 
             if (userOpt.isEmpty()) {
-                return ctx.ack(":x: You need to connect your Spotify account first. Visit /slack/install to get started.");
+                return ctx.ack(":x: You need to connect your Spotify account first. Visit " + AppConstants.SLACK_INSTALL_PATH + " to get started.");
             }
 
             User user = userOpt.get();
@@ -129,7 +130,7 @@ public class SlackCommandHandler {
             }
 
             User user = userOpt.get();
-            String reconnectUrl = "/oauth/spotify?userId=" + user.getId();
+            String reconnectUrl = AppConstants.OAUTH_SPOTIFY_PATH + "?userId=" + user.getId();
 
             return ctx.ack(errorMessageService.buildReconnectInstructions(reconnectUrl));
 
@@ -152,8 +153,8 @@ public class SlackCommandHandler {
                 `/trackify reconnect` - Reconnect your Spotify account
                 `/trackify help` - Show this help message
 
-                :link: To get started, connect your accounts at: /slack/install
-                """;
+                :link: To get started, connect your accounts at: %s
+                """.formatted(AppConstants.SLACK_INSTALL_PATH);
 
         return ctx.ack(helpMessage);
     }

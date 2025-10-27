@@ -1,5 +1,6 @@
 package com.trackify.trackify.service;
 
+import com.trackify.trackify.constants.AppConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,9 +56,9 @@ public class OAuthTemplateService {
                 <body style="font-family: sans-serif; text-align: center; padding: 50px;">
                     <h1>%s</h1>
                     <p>Error: %s</p>
-                    <a href="/slack/install" style="display: inline-block; padding: 10px 20px; background: #1DB954; color: white; text-decoration: none; border-radius: 5px;">Try Again</a>
+                    <a href="%s" style="display: inline-block; padding: 10px 20px; background: #1DB954; color: white; text-decoration: none; border-radius: 5px;">Try Again</a>
                 </body>
                 </html>
-                """.formatted(errorTitle, errorDetails);
+                """.formatted(errorTitle, errorDetails, AppConstants.SLACK_INSTALL_PATH);
     }
 }

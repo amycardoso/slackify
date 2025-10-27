@@ -7,6 +7,7 @@ import com.slack.api.bolt.service.builtin.oauth.OAuthErrorHandler;
 import com.slack.api.bolt.service.builtin.oauth.OAuthV2SuccessHandler;
 import com.slack.api.bolt.request.builtin.OAuthCallbackRequest;
 import com.slack.api.methods.response.oauth.OAuthV2AccessResponse;
+import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.service.MongoDBInstallationService;
 import com.trackify.trackify.service.MongoDBOAuthStateService;
 import com.trackify.trackify.service.OAuthTemplateService;
@@ -104,7 +105,7 @@ public class SlackConfig {
                 }
 
                 // Generate Spotify OAuth link with userId
-                String spotifyAuthLink = "/oauth/spotify?userId=" + userId;
+                String spotifyAuthLink = AppConstants.OAUTH_SPOTIFY_PATH + "?userId=" + userId;
                 String successHtml = templateService.renderSuccess(spotifyAuthLink);
 
                 return com.slack.api.bolt.response.Response.builder()
