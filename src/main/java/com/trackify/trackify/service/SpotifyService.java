@@ -9,6 +9,11 @@ import org.apache.hc.core5.http.ParseException;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.exceptions.SpotifyWebApiException;
+import se.michaelthelin.spotify.exceptions.detailed.*;
+import se.michaelthelin.spotify.exceptions.detailed.NotFoundException;
+import se.michaelthelin.spotify.exceptions.detailed.UnauthorizedException;
+import se.michaelthelin.spotify.exceptions.detailed.ForbiddenException;
+import se.michaelthelin.spotify.exceptions.detailed.TooManyRequestsException;
 import se.michaelthelin.spotify.model_objects.credentials.AuthorizationCodeCredentials;
 import se.michaelthelin.spotify.model_objects.miscellaneous.CurrentlyPlaying;
 import se.michaelthelin.spotify.model_objects.specification.Track;
@@ -105,8 +110,21 @@ public class SpotifyService {
             PauseUsersPlaybackRequest request = spotifyApi.pauseUsersPlayback().build();
             request.execute();
             log.info("Paused playback for user {}", user.getSlackUserId());
+        } catch (NotFoundException e) {
+            log.warn("No active device found for user {}", user.getSlackUserId());
+            throw new NoActiveDeviceException();
+        } catch (UnauthorizedException e) {
+            log.warn("Unauthorized - token expired for user {}", user.getSlackUserId());
+            throw new SpotifyTokenExpiredException();
+        } catch (ForbiddenException e) {
+            log.warn("Forbidden - Premium required for user {}", user.getSlackUserId());
+            throw new SpotifyPremiumRequiredException();
+        } catch (TooManyRequestsException e) {
+            log.warn("Rate limited for user {}", user.getSlackUserId());
+            throw new SpotifyRateLimitException();
         } catch (SpotifyWebApiException e) {
-            handleSpotifyApiException(e, "pause playback");
+            log.error("Spotify API error pausing playback for user {}: {}", user.getSlackUserId(), e.getMessage(), e);
+            throw new SpotifyException("Spotify API error: " + e.getMessage(), e);
         } catch (IOException | ParseException e) {
             log.error("Network error pausing playback for user {}", user.getSlackUserId(), e);
             throw new SpotifyException("Network error communicating with Spotify", e);
@@ -121,8 +139,21 @@ public class SpotifyService {
             StartResumeUsersPlaybackRequest request = spotifyApi.startResumeUsersPlayback().build();
             request.execute();
             log.info("Resumed playback for user {}", user.getSlackUserId());
+        } catch (NotFoundException e) {
+            log.warn("No active device found for user {}", user.getSlackUserId());
+            throw new NoActiveDeviceException();
+        } catch (UnauthorizedException e) {
+            log.warn("Unauthorized - token expired for user {}", user.getSlackUserId());
+            throw new SpotifyTokenExpiredException();
+        } catch (ForbiddenException e) {
+            log.warn("Forbidden - Premium required for user {}", user.getSlackUserId());
+            throw new SpotifyPremiumRequiredException();
+        } catch (TooManyRequestsException e) {
+            log.warn("Rate limited for user {}", user.getSlackUserId());
+            throw new SpotifyRateLimitException();
         } catch (SpotifyWebApiException e) {
-            handleSpotifyApiException(e, "resume playback");
+            log.error("Spotify API error resuming playback for user {}: {}", user.getSlackUserId(), e.getMessage(), e);
+            throw new SpotifyException("Spotify API error: " + e.getMessage(), e);
         } catch (IOException | ParseException e) {
             log.error("Network error resuming playback for user {}", user.getSlackUserId(), e);
             throw new SpotifyException("Network error communicating with Spotify", e);
@@ -140,43 +171,6 @@ public class SpotifyService {
                 credentials.getRefreshToken() != null ? credentials.getRefreshToken() : refreshToken,
                 credentials.getExpiresIn()
         );
-    }
-
-    private void handleSpotifyApiException(SpotifyWebApiException e, String operation) {
-        String message = e.getMessage();
-
-        log.error("Spotify API error during {}: message={}", operation, message);
-
-        // Parse error message for specific error types
-        if (message != null) {
-            String lowerMessage = message.toLowerCase();
-
-            // No active device found
-            if (lowerMessage.contains("no active device") || lowerMessage.contains("device not found") ||
-                lowerMessage.contains("player command failed")) {
-                throw new NoActiveDeviceException();
-            }
-
-            // Token expired / Unauthorized
-            if (lowerMessage.contains("unauthorized") || lowerMessage.contains("token") ||
-                lowerMessage.contains("401")) {
-                throw new SpotifyTokenExpiredException();
-            }
-
-            // Premium required
-            if (lowerMessage.contains("premium") || lowerMessage.contains("403")) {
-                throw new SpotifyPremiumRequiredException();
-            }
-
-            // Rate limited
-            if (lowerMessage.contains("rate limit") || lowerMessage.contains("429") ||
-                lowerMessage.contains("too many requests")) {
-                throw new SpotifyRateLimitException();
-            }
-        }
-
-        // Default: Generic Spotify error
-        throw new SpotifyException("Spotify API error: " + message, e);
     }
 
     private SpotifyApi getSpotifyApi(String accessToken) {
