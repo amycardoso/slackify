@@ -2,6 +2,7 @@ package com.trackify.trackify.config;
 
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
+import com.slack.api.bolt.model.builtin.DefaultInstaller;
 import com.slack.api.bolt.service.builtin.oauth.OAuthErrorHandler;
 import com.slack.api.bolt.service.builtin.oauth.OAuthV2SuccessHandler;
 import com.slack.api.bolt.request.builtin.OAuthCallbackRequest;
@@ -58,18 +59,54 @@ public class SlackConfig {
         app.oauthCallback((OAuthV2SuccessHandler) (req, resp, oauthAccess) -> {
             String slackUserId = oauthAccess.getAuthedUser().getId();
             String teamId = oauthAccess.getTeam().getId();
+            String accessToken = oauthAccess.getAuthedUser().getAccessToken();
 
-            log.info("Slack OAuth completed for user: {} in team: {}", slackUserId, teamId);
+            log.info("=== OAuth Callback - User: {}, Team: {}, Token present: {} ===",
+                    slackUserId, teamId, accessToken != null);
 
-            // Find the user we just created in MongoDB
-            String userId = installationService.findUserIdBySlackUserId(slackUserId);
+            try {
+                // Create Installer object from OAuth response
+                DefaultInstaller installer = new DefaultInstaller();
+                installer.setInstallerUserId(slackUserId);
+                installer.setTeamId(teamId);
+                installer.setInstallerUserAccessToken(accessToken);
 
-            if (userId == null) {
-                log.error("Could not find user after OAuth completion for slackUserId: {}", slackUserId);
+                // Explicitly save the user (Bolt doesn't call saveInstallerAndBot for user tokens)
+                installationService.saveInstallerAndBot(installer);
+
+                // Get the user ID we just created/updated
+                String userId = installationService.findUserIdBySlackUserId(slackUserId);
+
+                if (userId == null) {
+                    log.error("Failed to retrieve user ID after save for slackUserId: {}", slackUserId);
+                    String errorHtml = templateService.renderError(
+                            "Installation Error",
+                            "Something went wrong during the installation process.",
+                            "Unable to create user account."
+                    );
+                    return com.slack.api.bolt.response.Response.builder()
+                            .statusCode(500)
+                            .contentType("text/html")
+                            .body(errorHtml)
+                            .build();
+                }
+
+                // Generate Spotify OAuth link with userId
+                String spotifyAuthLink = "/oauth/spotify?userId=" + userId;
+                String successHtml = templateService.renderSuccess(spotifyAuthLink);
+
+                return com.slack.api.bolt.response.Response.builder()
+                        .statusCode(200)
+                        .contentType("text/html")
+                        .body(successHtml)
+                        .build();
+
+            } catch (Exception e) {
+                log.error("Error in OAuth callback", e);
                 String errorHtml = templateService.renderError(
                         "Installation Error",
                         "Something went wrong during the installation process.",
-                        "User account not found after OAuth completion."
+                        e.getMessage()
                 );
                 return com.slack.api.bolt.response.Response.builder()
                         .statusCode(500)
@@ -77,16 +114,6 @@ public class SlackConfig {
                         .body(errorHtml)
                         .build();
             }
-
-            // Generate Spotify OAuth link with userId
-            String spotifyAuthLink = "/oauth/spotify?userId=" + userId;
-            String successHtml = templateService.renderSuccess(spotifyAuthLink);
-
-            return com.slack.api.bolt.response.Response.builder()
-                    .statusCode(200)
-                    .contentType("text/html")
-                    .body(successHtml)
-                    .build();
         });
 
         // OAuth Error Handler - called if OAuth fails
