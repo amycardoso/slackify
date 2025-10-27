@@ -260,7 +260,7 @@ public class SlackCommandHandler {
 
     private String buildStatusMessage(User user, UserSettings settings) {
         StringBuilder message = new StringBuilder();
-        message.append(":musical_note: *Your Trackify Status*\n\n");
+        message.append("*Your Trackify Status*\n\n");
 
         // Sync status
         message.append("*Sync Status:* ");
