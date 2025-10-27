@@ -73,7 +73,7 @@ public class SpotifyService {
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
             SpotifyApi spotifyApi = getSpotifyApi(accessToken);
 
-            GetUsersCurrentlyPlayingTrackRequest request = spotifyApi.getUsersCurrentlyPlayingTrack().build();
+            var request = spotifyApi.getUsersCurrentlyPlayingTrack().build();
             CurrentlyPlaying currentlyPlaying = request.execute();
 
             if (currentlyPlaying == null || currentlyPlaying.getItem() == null) {
@@ -90,6 +90,7 @@ public class SpotifyService {
                         .trackName(track.getName())
                         .artistName(artistName)
                         .isPlaying(currentlyPlaying.getIs_playing())
+                        .durationMs(track.getDurationMs())
                         .build();
             }
 

@@ -67,7 +67,8 @@ public class MusicSyncService {
             slackService.updateUserStatus(
                     user,
                     currentTrack.getTrackName(),
-                    currentTrack.getArtistName()
+                    currentTrack.getArtistName(),
+                    currentTrack.getDurationMs()
             );
 
             // Update user's currently playing info in database

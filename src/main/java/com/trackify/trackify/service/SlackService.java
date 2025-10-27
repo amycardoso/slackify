@@ -28,7 +28,7 @@ public class SlackService {
             maxAttemptsExpression = "${trackify.retry.max-attempts}",
             backoff = @Backoff(delayExpression = "${trackify.retry.backoff-delay}", multiplier = 2)
     )
-    public void updateUserStatus(User user, String songTitle, String artist) {
+    public void updateUserStatus(User user, String songTitle, String artist, Integer durationMs) {
         try {
             UserSettings settings = userService.getUserSettings(user.getId())
                     .orElseThrow(() -> new RuntimeException(AppConstants.ERROR_USER_SETTINGS_NOT_FOUND));
@@ -41,9 +41,19 @@ public class SlackService {
             String statusText = buildStatusText(settings, songTitle, artist);
             String statusEmoji = settings.getDefaultEmoji();
 
-            setSlackStatus(user.getSlackAccessToken(), statusText, statusEmoji);
+            // Calculate status expiration based on song duration
+            Long statusExpiration = null;
+            if (durationMs != null && durationMs > 0) {
+                // Convert duration from milliseconds to seconds and add to current time
+                long currentTimeSeconds = System.currentTimeMillis() / 1000;
+                long durationSeconds = durationMs / 1000;
+                statusExpiration = currentTimeSeconds + durationSeconds;
+            }
 
-            log.info("Updated Slack status for user {}: {}", user.getSlackUserId(), statusText);
+            setSlackStatus(user.getSlackAccessToken(), statusText, statusEmoji, statusExpiration);
+
+            log.info("Updated Slack status for user {}: {} (expires in {}s)",
+                    user.getSlackUserId(), statusText, durationMs != null ? durationMs / 1000 : "N/A");
         } catch (Exception e) {
             log.error("Error updating Slack status for user {}", user.getSlackUserId(), e);
             throw new RuntimeException(AppConstants.ERROR_FAILED_TO_UPDATE_SLACK_STATUS, e);
@@ -56,7 +66,7 @@ public class SlackService {
     )
     public void clearUserStatus(User user) {
         try {
-            setSlackStatus(user.getSlackAccessToken(), "", "");
+            setSlackStatus(user.getSlackAccessToken(), "", "", null);
             log.info("Cleared Slack status for user {}", user.getSlackUserId());
         } catch (Exception e) {
             log.error("Error clearing Slack status for user {}", user.getSlackUserId(), e);
@@ -64,13 +74,18 @@ public class SlackService {
         }
     }
 
-    private void setSlackStatus(String accessToken, String statusText, String statusEmoji)
+    private void setSlackStatus(String accessToken, String statusText, String statusEmoji, Long statusExpiration)
             throws IOException, SlackApiException {
         MethodsClient client = slack.methods(accessToken);
 
         Profile profile = new Profile();
         profile.setStatusText(statusText);
         profile.setStatusEmoji(statusEmoji);
+
+        // Set status expiration if provided
+        if (statusExpiration != null) {
+            profile.setStatusExpiration(statusExpiration);
+        }
 
         UsersProfileSetRequest request = UsersProfileSetRequest.builder()
                 .profile(profile)
