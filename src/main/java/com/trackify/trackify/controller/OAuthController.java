@@ -1,6 +1,6 @@
 package com.trackify.trackify.controller;
 
-import com.trackify.trackify.config.SpotifyConfig;
+import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.service.SpotifyService;
 import com.trackify.trackify.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,6 @@ public class OAuthController {
 
     private final UserService userService;
     private final SpotifyService spotifyService;
-    private final SpotifyConfig spotifyConfig;
 
     @GetMapping("/spotify")
     public RedirectView initiateSpotifyOAuth(@RequestParam("userId") String userId) {
@@ -49,8 +48,8 @@ public class OAuthController {
             // Exchange code for access token
             AuthorizationCodeCredentials credentials = spotifyService.getAccessToken(code);
 
-            // Get Spotify user ID (in a real implementation, fetch from Spotify API)
-            String spotifyUserId = "spotify_user_" + System.currentTimeMillis();
+            // Generate temporary Spotify user ID (will be updated on first sync)
+            String spotifyUserId = AppConstants.SPOTIFY_USER_ID_PREFIX + System.currentTimeMillis();
 
             // Update user with Spotify tokens
             userService.updateSpotifyTokens(
