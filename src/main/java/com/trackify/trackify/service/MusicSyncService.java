@@ -39,22 +39,18 @@ public class MusicSyncService {
     }
 
     private void syncUserMusicStatus(User user) {
-        // Check if user has Spotify connected
         if (user.getEncryptedSpotifyAccessToken() == null) {
             log.debug("User {} has no Spotify token, skipping sync", user.getSlackUserId());
             return;
         }
 
-        // Get currently playing track from Spotify
         CurrentlyPlayingTrackInfo currentTrack = spotifyService.getCurrentlyPlayingTrack(user);
 
         if (currentTrack == null || !currentTrack.isPlaying()) {
-            // No track playing or playback paused
             handleNoTrackPlaying(user);
             return;
         }
 
-        // Check if the track has changed
         boolean trackChanged = hasTrackChanged(user, currentTrack);
 
         if (trackChanged) {
@@ -63,15 +59,6 @@ public class MusicSyncService {
                     currentTrack.getTrackName(),
                     currentTrack.getArtistName());
 
-            // Update Slack status
-            slackService.updateUserStatus(
-                    user,
-                    currentTrack.getTrackName(),
-                    currentTrack.getArtistName(),
-                    currentTrack.getDurationMs()
-            );
-
-            // Update user's currently playing info in database
             userService.updateCurrentlyPlaying(
                     user.getId(),
                     currentTrack.getTrackId(),
@@ -79,12 +66,22 @@ public class MusicSyncService {
                     currentTrack.getArtistName()
             );
         } else {
-            log.debug("No track change for user {}, skipping status update", user.getSlackUserId());
+            log.debug("Same track still playing for user {}, refreshing status expiration", user.getSlackUserId());
         }
+
+        // ALWAYS update Slack status to refresh expiration time
+        // This is critical: even when track hasn't changed, we need to update the expiration
+        // based on current progress to prevent status from expiring mid-song
+        slackService.updateUserStatus(
+                user,
+                currentTrack.getTrackName(),
+                currentTrack.getArtistName(),
+                currentTrack.getDurationMs(),
+                currentTrack.getProgressMs()
+        );
     }
 
     private void handleNoTrackPlaying(User user) {
-        // If there was a previously playing track, clear the status
         if (user.getCurrentlyPlayingSongId() != null) {
             log.info("No track playing for user {}, clearing status", user.getSlackUserId());
             slackService.clearUserStatus(user);
@@ -95,12 +92,10 @@ public class MusicSyncService {
     private boolean hasTrackChanged(User user, CurrentlyPlayingTrackInfo currentTrack) {
         String previousTrackId = user.getCurrentlyPlayingSongId();
 
-        // If no previous track, this is a new track
         if (previousTrackId == null) {
             return true;
         }
 
-        // Compare track IDs
         return !previousTrackId.equals(currentTrack.getTrackId());
     }
 
