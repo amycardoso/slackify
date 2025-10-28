@@ -63,6 +63,8 @@ public class SlackService {
 
             setSlackStatus(user.getSlackAccessToken(), statusText, statusEmoji, statusExpiration);
 
+            userService.updateLastSetStatus(user.getId(), statusText);
+
             log.info("Updated Slack status for user {}: {} (expires in {}s)",
                     user.getSlackUserId(), statusText, statusExpiration != null ? (statusExpiration - System.currentTimeMillis() / 1000) : "N/A");
         } catch (Exception e) {
@@ -126,6 +128,75 @@ public class SlackService {
                    .trim();
 
         return text;
+    }
+
+    /**
+     * Fetches the current Slack status for a user.
+     * Returns null if unable to fetch (e.g., network error, invalid token).
+     */
+    public String getCurrentStatusText(User user) {
+        try {
+            MethodsClient client = slack.methods(user.getSlackAccessToken());
+            var response = client.usersProfileGet(req -> req.user(user.getSlackUserId()));
+
+            if (response.isOk() && response.getProfile() != null) {
+                String statusText = response.getProfile().getStatusText();
+                log.debug("Fetched current status for user {}: {}", user.getSlackUserId(), statusText);
+                return statusText != null ? statusText : "";
+            } else {
+                log.warn("Failed to fetch current status for user {}: {}", user.getSlackUserId(), response.getError());
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Error fetching current status for user {}", user.getSlackUserId(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Checks if the user has manually changed their Slack status.
+     * Returns true if the current status differs from what we last set.
+     */
+    public boolean hasManualStatusChange(User user) {
+        String currentStatus = getCurrentStatusText(user);
+
+        if (currentStatus == null) {
+            log.debug("Could not fetch current status for user {}, assuming no manual change", user.getSlackUserId());
+            return false;
+        }
+
+        String lastSetStatus = user.getLastSetStatusText();
+
+        if (lastSetStatus == null) {
+            boolean isManual = !currentStatus.isEmpty();
+            log.debug("No previous status set for user {}, current='{}', manual={}",
+                    user.getSlackUserId(), currentStatus, isManual);
+            return isManual;
+        }
+
+        boolean hasChanged = !normalizeStatusText(currentStatus).equals(normalizeStatusText(lastSetStatus));
+
+        if (hasChanged) {
+            log.info("Manual status change detected for user {}: '{}' -> '{}'",
+                    user.getSlackUserId(), lastSetStatus, currentStatus);
+        }
+
+        return hasChanged;
+    }
+
+    /**
+     * Normalizes status text for comparison by trimming and handling HTML entities.
+     */
+    private String normalizeStatusText(String statusText) {
+        if (statusText == null) {
+            return "";
+        }
+        return statusText.trim()
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'");
     }
 
     public String sendMessage(String accessToken, String channel, String message) {

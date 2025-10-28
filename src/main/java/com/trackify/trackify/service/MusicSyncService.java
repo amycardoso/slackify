@@ -62,6 +62,26 @@ public class MusicSyncService {
         boolean needsExpirationRefresh = shouldRefreshExpiration(currentTrack);
         boolean shouldUpdateStatus = trackChanged || needsExpirationRefresh;
 
+        // Check for manual status changes
+        if (!user.isManualStatusSet() && slackService.hasManualStatusChange(user)) {
+            log.info("User {} has manually changed their status, pausing automatic updates", user.getSlackUserId());
+            userService.setManualStatusFlag(user.getId(), true);
+            return; // Don't override manual status
+        }
+
+        // If user has manual status set, skip automatic updates
+        if (user.isManualStatusSet()) {
+            // But clear the flag if track changed - new track = new automatic update
+            if (trackChanged) {
+                log.info("Track changed for user {} while manual status was set, resuming automatic updates",
+                        user.getSlackUserId());
+                userService.setManualStatusFlag(user.getId(), false);
+            } else {
+                log.debug("User {} has manual status set, skipping automatic update", user.getSlackUserId());
+                return;
+            }
+        }
+
         if (trackChanged) {
             log.info("Track changed for user {}: {} - {}",
                     user.getSlackUserId(),
