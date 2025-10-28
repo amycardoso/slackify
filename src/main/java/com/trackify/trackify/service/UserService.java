@@ -131,6 +131,31 @@ public class UserService {
         log.debug("Cleared currently playing for user {}", userId);
     }
 
+    @Transactional
+    public void updateLastSetStatus(String userId, String statusText) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setLastSetStatusText(statusText);
+        user.setManualStatusSet(false); // Clear manual flag when we set status
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        log.debug("Updated last set status for user {}: {}", userId, statusText);
+    }
+
+    @Transactional
+    public void setManualStatusFlag(String userId, boolean manualStatusSet) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setManualStatusSet(manualStatusSet);
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        log.debug("Set manual status flag for user {} to: {}", userId, manualStatusSet);
+    }
+
     public Optional<UserSettings> getUserSettings(String userId) {
         return userSettingsRepository.findByUserId(userId);
     }

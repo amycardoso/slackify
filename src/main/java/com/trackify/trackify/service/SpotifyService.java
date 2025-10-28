@@ -91,6 +91,7 @@ public class SpotifyService {
                         .artistName(artistName)
                         .isPlaying(currentlyPlaying.getIs_playing())
                         .durationMs(track.getDurationMs())
+                        .progressMs(currentlyPlaying.getProgress_ms())
                         .build();
             }
 

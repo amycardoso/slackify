@@ -10,6 +10,7 @@ import com.trackify.trackify.model.User;
 import com.trackify.trackify.model.UserSettings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -24,11 +25,14 @@ public class SlackService {
     private final UserService userService;
     private final com.slack.api.Slack slack = com.slack.api.Slack.getInstance();
 
+    @Value("${trackify.sync.expiration-overhead-ms:120000}")
+    private long expirationOverheadMs;
+
     @Retryable(
             maxAttemptsExpression = "${trackify.retry.max-attempts}",
             backoff = @Backoff(delayExpression = "${trackify.retry.backoff-delay}", multiplier = 2)
     )
-    public void updateUserStatus(User user, String songTitle, String artist, Integer durationMs) {
+    public void updateUserStatus(User user, String songTitle, String artist, Integer durationMs, Integer progressMs) {
         try {
             UserSettings settings = userService.getUserSettings(user.getId())
                     .orElseThrow(() -> new RuntimeException(AppConstants.ERROR_USER_SETTINGS_NOT_FOUND));
@@ -41,19 +45,28 @@ public class SlackService {
             String statusText = buildStatusText(settings, songTitle, artist);
             String statusEmoji = settings.getDefaultEmoji();
 
-            // Calculate status expiration based on song duration
+            // Calculate status expiration based on remaining song time + overhead
             Long statusExpiration = null;
             if (durationMs != null && durationMs > 0) {
-                // Convert duration from milliseconds to seconds and add to current time
+                // Calculate remaining time: duration - current progress + overhead buffer
+                int currentProgress = (progressMs != null && progressMs > 0) ? progressMs : 0;
+                long remainingMs = durationMs - currentProgress + expirationOverheadMs;
+
+                // Convert to Unix timestamp in seconds
                 long currentTimeSeconds = System.currentTimeMillis() / 1000;
-                long durationSeconds = durationMs / 1000;
-                statusExpiration = currentTimeSeconds + durationSeconds;
+                long remainingSeconds = remainingMs / 1000;
+                statusExpiration = currentTimeSeconds + remainingSeconds;
+
+                log.debug("Status expiration calculated: remaining={}s (duration={}s, progress={}s, overhead={}s)",
+                        remainingSeconds, durationMs / 1000, currentProgress / 1000, expirationOverheadMs / 1000);
             }
 
             setSlackStatus(user.getSlackAccessToken(), statusText, statusEmoji, statusExpiration);
 
+            userService.updateLastSetStatus(user.getId(), statusText);
+
             log.info("Updated Slack status for user {}: {} (expires in {}s)",
-                    user.getSlackUserId(), statusText, durationMs != null ? durationMs / 1000 : "N/A");
+                    user.getSlackUserId(), statusText, statusExpiration != null ? (statusExpiration - System.currentTimeMillis() / 1000) : "N/A");
         } catch (Exception e) {
             log.error("Error updating Slack status for user {}", user.getSlackUserId(), e);
             throw new RuntimeException(AppConstants.ERROR_FAILED_TO_UPDATE_SLACK_STATUS, e);
@@ -115,6 +128,75 @@ public class SlackService {
                    .trim();
 
         return text;
+    }
+
+    /**
+     * Fetches the current Slack status for a user.
+     * Returns null if unable to fetch (e.g., network error, invalid token).
+     */
+    public String getCurrentStatusText(User user) {
+        try {
+            MethodsClient client = slack.methods(user.getSlackAccessToken());
+            var response = client.usersProfileGet(req -> req.user(user.getSlackUserId()));
+
+            if (response.isOk() && response.getProfile() != null) {
+                String statusText = response.getProfile().getStatusText();
+                log.debug("Fetched current status for user {}: {}", user.getSlackUserId(), statusText);
+                return statusText != null ? statusText : "";
+            } else {
+                log.warn("Failed to fetch current status for user {}: {}", user.getSlackUserId(), response.getError());
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Error fetching current status for user {}", user.getSlackUserId(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Checks if the user has manually changed their Slack status.
+     * Returns true if the current status differs from what we last set.
+     */
+    public boolean hasManualStatusChange(User user) {
+        String currentStatus = getCurrentStatusText(user);
+
+        if (currentStatus == null) {
+            log.debug("Could not fetch current status for user {}, assuming no manual change", user.getSlackUserId());
+            return false;
+        }
+
+        String lastSetStatus = user.getLastSetStatusText();
+
+        if (lastSetStatus == null) {
+            boolean isManual = !currentStatus.isEmpty();
+            log.debug("No previous status set for user {}, current='{}', manual={}",
+                    user.getSlackUserId(), currentStatus, isManual);
+            return isManual;
+        }
+
+        boolean hasChanged = !normalizeStatusText(currentStatus).equals(normalizeStatusText(lastSetStatus));
+
+        if (hasChanged) {
+            log.info("Manual status change detected for user {}: '{}' -> '{}'",
+                    user.getSlackUserId(), lastSetStatus, currentStatus);
+        }
+
+        return hasChanged;
+    }
+
+    /**
+     * Normalizes status text for comparison by trimming and handling HTML entities.
+     */
+    private String normalizeStatusText(String statusText) {
+        if (statusText == null) {
+            return "";
+        }
+        return statusText.trim()
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'");
     }
 
     public String sendMessage(String accessToken, String channel, String message) {

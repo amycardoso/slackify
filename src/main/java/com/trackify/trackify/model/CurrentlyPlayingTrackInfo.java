@@ -11,4 +11,5 @@ public class CurrentlyPlayingTrackInfo {
     private String artistName;
     private boolean isPlaying;
     private Integer durationMs; // Track duration in milliseconds
+    private Integer progressMs; // Current playback position in milliseconds
 }

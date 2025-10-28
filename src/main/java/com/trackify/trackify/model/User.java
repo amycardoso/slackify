@@ -43,6 +43,10 @@ public class User {
 
     private LocalDateTime lastSyncedAt;
 
+    private String lastSetStatusText; // The status text we last set, used to detect manual changes
+
+    private boolean manualStatusSet; // Flag indicating user manually changed their status
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
