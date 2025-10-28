@@ -5,6 +5,7 @@ import com.trackify.trackify.model.CurrentlyPlayingTrackInfo;
 import com.trackify.trackify.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,12 @@ public class MusicSyncService {
     private final UserService userService;
     private final SpotifyService spotifyService;
     private final SlackService slackService;
+
+    @Value("${trackify.sync.polling-interval}")
+    private long pollingIntervalMs;
+
+    @Value("${trackify.sync.expiration-overhead-ms}")
+    private long expirationOverheadMs;
 
     @Scheduled(fixedDelayString = "${trackify.sync.polling-interval}")
     public void syncMusicStatus() {
@@ -52,6 +59,8 @@ public class MusicSyncService {
         }
 
         boolean trackChanged = hasTrackChanged(user, currentTrack);
+        boolean needsExpirationRefresh = shouldRefreshExpiration(currentTrack);
+        boolean shouldUpdateStatus = trackChanged || needsExpirationRefresh;
 
         if (trackChanged) {
             log.info("Track changed for user {}: {} - {}",
@@ -65,20 +74,48 @@ public class MusicSyncService {
                     currentTrack.getTrackName(),
                     currentTrack.getArtistName()
             );
-        } else {
-            log.debug("Same track still playing for user {}, refreshing status expiration", user.getSlackUserId());
         }
 
-        // ALWAYS update Slack status to refresh expiration time
-        // This is critical: even when track hasn't changed, we need to update the expiration
-        // based on current progress to prevent status from expiring mid-song
-        slackService.updateUserStatus(
-                user,
-                currentTrack.getTrackName(),
-                currentTrack.getArtistName(),
-                currentTrack.getDurationMs(),
-                currentTrack.getProgressMs()
-        );
+        if (shouldUpdateStatus) {
+            if (needsExpirationRefresh && !trackChanged) {
+                log.debug("Same track playing for user {}, but expiration approaching - refreshing status", user.getSlackUserId());
+            }
+
+            slackService.updateUserStatus(
+                    user,
+                    currentTrack.getTrackName(),
+                    currentTrack.getArtistName(),
+                    currentTrack.getDurationMs(),
+                    currentTrack.getProgressMs()
+            );
+        } else {
+            log.debug("Same track playing for user {}, expiration still valid - skipping update", user.getSlackUserId());
+        }
+    }
+
+    /**
+     * Determines if we should refresh the status expiration.
+     * Returns true if the remaining time is less than 3x the polling interval.
+     * This ensures we refresh before the status expires, accounting for:
+     * - 2x polling interval: buffer for timing variations
+     * - 1x polling interval: ensures at least one more chance to update
+     */
+    private boolean shouldRefreshExpiration(CurrentlyPlayingTrackInfo currentTrack) {
+        if (currentTrack.getDurationMs() == null || currentTrack.getProgressMs() == null) {
+            return true; // If we don't have progress info, update to be safe
+        }
+
+        long remainingMs = currentTrack.getDurationMs() - currentTrack.getProgressMs();
+        long refreshThresholdMs = (pollingIntervalMs * 3) + expirationOverheadMs;
+
+        boolean shouldRefresh = remainingMs <= refreshThresholdMs;
+
+        if (shouldRefresh) {
+            log.debug("Expiration refresh needed: remaining={}s, threshold={}s",
+                    remainingMs / 1000, refreshThresholdMs / 1000);
+        }
+
+        return shouldRefresh;
     }
 
     private void handleNoTrackPlaying(User user) {
