@@ -23,6 +23,7 @@ import java.io.IOException;
 public class SlackService {
 
     private final UserService userService;
+    private final TokenValidationService tokenValidationService;
     private final com.slack.api.Slack slack = com.slack.api.Slack.getInstance();
 
     @Value("${trackify.sync.expiration-overhead-ms:120000}")
@@ -67,6 +68,29 @@ public class SlackService {
 
             log.info("Updated Slack status for user {}: {} (expires in {}s)",
                     user.getSlackUserId(), statusText, statusExpiration != null ? (statusExpiration - System.currentTimeMillis() / 1000) : "N/A");
+        } catch (RuntimeException e) {
+            // Check if this is a token invalidation error
+            if (e.getMessage() != null && e.getMessage().contains("Slack token invalidated")) {
+                log.error("Slack token invalidated for user {}: {}", user.getSlackUserId(), e.getMessage());
+
+                // Mark user as invalidated
+                tokenValidationService.markUserAsInvalidated(user, e.getMessage());
+
+                // Try to send notification (might fail if token is completely invalid)
+                try {
+                    String notificationMessage = "⚠️ *Your Slack connection has been revoked*\n\n" +
+                            "Trackify can no longer update your Slack status. " +
+                            "To resume automatic status updates, please reinstall the app.";
+                    sendMessage(user.getSlackAccessToken(), user.getSlackUserId(), notificationMessage);
+                    log.info("Sent invalidation notification to user {}", user.getSlackUserId());
+                } catch (Exception notifyError) {
+                    log.warn("Could not send invalidation notification to user {}: {}",
+                            user.getSlackUserId(), notifyError.getMessage());
+                }
+            } else {
+                log.error("Error updating Slack status for user {}", user.getSlackUserId(), e);
+                throw new RuntimeException(AppConstants.ERROR_FAILED_TO_UPDATE_SLACK_STATUS, e);
+            }
         } catch (Exception e) {
             log.error("Error updating Slack status for user {}", user.getSlackUserId(), e);
             throw new RuntimeException(AppConstants.ERROR_FAILED_TO_UPDATE_SLACK_STATUS, e);
@@ -107,8 +131,15 @@ public class SlackService {
         UsersProfileSetResponse response = client.usersProfileSet(request);
 
         if (!response.isOk()) {
-            log.error("Failed to set Slack status: {}", response.getError());
-            throw new RuntimeException("Slack API error: " + response.getError());
+            String error = response.getError();
+            log.error("Failed to set Slack status: {}", error);
+
+            // Check if error indicates token invalidation
+            if (tokenValidationService.isSlackTokenInvalidError(error)) {
+                throw new RuntimeException("Slack token invalidated: " + error);
+            }
+
+            throw new RuntimeException("Slack API error: " + error);
         }
     }
 
