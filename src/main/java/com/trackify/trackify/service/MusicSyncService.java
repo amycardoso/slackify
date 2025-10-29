@@ -19,11 +19,12 @@ public class MusicSyncService {
     private final UserService userService;
     private final SpotifyService spotifyService;
     private final SlackService slackService;
+    private final TimezoneService timezoneService;
 
-    @Value("${trackify.sync.polling-interval}")
+    @Value("${trackify.sync.polling-interval:10000}")
     private long pollingIntervalMs;
 
-    @Value("${trackify.sync.expiration-overhead-ms}")
+    @Value("${trackify.sync.expiration-overhead-ms:120000}")
     private long expirationOverheadMs;
 
     @Scheduled(fixedDelayString = "${trackify.sync.polling-interval}")
@@ -48,6 +49,18 @@ public class MusicSyncService {
     private void syncUserMusicStatus(User user) {
         if (user.getEncryptedSpotifyAccessToken() == null) {
             log.debug("User {} has no Spotify token, skipping sync", user.getSlackUserId());
+            return;
+        }
+
+        // Check if user has token invalidated
+        if (user.isTokenInvalidated()) {
+            log.debug("User {} has invalidated token, skipping sync", user.getSlackUserId());
+            return;
+        }
+
+        // Check working hours if enabled
+        if (!isWithinWorkingHours(user)) {
+            log.debug("User {} is outside working hours, skipping sync", user.getSlackUserId());
             return;
         }
 
@@ -154,6 +167,57 @@ public class MusicSyncService {
         }
 
         return !previousTrackId.equals(currentTrack.getTrackId());
+    }
+
+    /**
+     * Checks if the user is within their configured working hours.
+     * Returns true if working hours are disabled or if current time is within working hours.
+     * Returns false if outside working hours.
+     */
+    private boolean isWithinWorkingHours(User user) {
+        var settings = userService.getUserSettings(user.getId());
+
+        if (settings.isEmpty()) {
+            log.warn("No settings found for user {}, allowing sync", user.getSlackUserId());
+            return true; // No settings = allow sync
+        }
+
+        var userSettings = settings.get();
+
+        // If working hours not enabled, sync 24/7
+        if (!userSettings.isWorkingHoursEnabled()) {
+            return true;
+        }
+
+        // Check if working hours are configured
+        if (userSettings.getSyncStartHour() == null || userSettings.getSyncEndHour() == null) {
+            log.debug("Working hours enabled but not configured for user {}, allowing sync", user.getSlackUserId());
+            return true;
+        }
+
+        // Check if current time is within working hours (in UTC)
+        boolean isWithin = timezoneService.isWithinWorkingHours(
+                userSettings.getSyncStartHour(),
+                userSettings.getSyncEndHour()
+        );
+
+        if (!isWithin) {
+            log.debug("User {} is outside working hours (UTC {} - {}), skipping sync",
+                    user.getSlackUserId(),
+                    formatHHMM(userSettings.getSyncStartHour()),
+                    formatHHMM(userSettings.getSyncEndHour()));
+        }
+
+        return isWithin;
+    }
+
+    /**
+     * Formats HHMM integer as readable time string for logging.
+     */
+    private String formatHHMM(int hhmm) {
+        int hour = hhmm / 100;
+        int minute = hhmm % 100;
+        return String.format("%02d:%02d", hour, minute);
     }
 
     public void manualSync(String userId) {

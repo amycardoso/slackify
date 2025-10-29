@@ -131,6 +131,29 @@ public class SlackService {
     }
 
     /**
+     * Fetches the user's timezone offset from Slack API.
+     * Returns timezone offset in seconds from UTC, or null if unable to fetch.
+     */
+    public Integer getUserTimezoneOffset(String accessToken, String userId) {
+        try {
+            MethodsClient client = slack.methods(accessToken);
+            var response = client.usersInfo(req -> req.user(userId));
+
+            if (response.isOk() && response.getUser() != null) {
+                Integer tzOffset = response.getUser().getTzOffset();
+                log.debug("Fetched timezone offset for user {}: {} seconds", userId, tzOffset);
+                return tzOffset;
+            } else {
+                log.warn("Failed to fetch user info for {}: {}", userId, response.getError());
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("Error fetching user info for {}", userId, e);
+            return null;
+        }
+    }
+
+    /**
      * Fetches the current Slack status for a user.
      * Returns null if unable to fetch (e.g., network error, invalid token).
      */

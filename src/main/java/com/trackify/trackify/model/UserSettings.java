@@ -46,6 +46,16 @@ public class UserSettings {
     @Builder.Default
     private Map<String, String> genreEmojiMap = new HashMap<>();
 
+    // Working hours configuration
+    @Builder.Default
+    private boolean workingHoursEnabled = false; // Default: sync 24/7
+
+    private Integer syncStartHour; // HHMM format in UTC (e.g., 0900 for 9:00 AM UTC)
+
+    private Integer syncEndHour; // HHMM format in UTC (e.g., 1700 for 5:00 PM UTC)
+
+    private Integer timezoneOffsetSeconds; // User's timezone offset from UTC in seconds
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
