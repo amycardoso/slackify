@@ -46,6 +46,9 @@ public class UserSettings {
     @Builder.Default
     private Map<String, String> genreEmojiMap = new HashMap<>();
 
+    // Device tracking configuration
+    private java.util.List<String> allowedDeviceIds; // List of Spotify device IDs to track (null = all devices)
+
     // Working hours configuration
     @Builder.Default
     private boolean workingHoursEnabled = false; // Default: sync 24/7

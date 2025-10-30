@@ -6,12 +6,15 @@ import com.slack.api.model.view.View;
 import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.model.User;
 import com.trackify.trackify.model.UserSettings;
+import com.trackify.trackify.model.SpotifyDevice;
 import com.trackify.trackify.service.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,6 +36,7 @@ public class AppHomeHandler {
     private final AppHomeService appHomeService;
     private final UserService userService;
     private final MusicSyncService musicSyncService;
+    private final SpotifyService spotifyService;
     private final WorkingHoursValidator workingHoursValidator;
     private final TimezoneService timezoneService;
 
@@ -44,6 +48,10 @@ public class AppHomeHandler {
         registerManualSyncAction();
         registerConfigureWorkingHoursAction();
         registerWorkingHoursModalSubmission();
+        registerConfigureEmojiAction();
+        registerEmojiModalSubmission();
+        registerConfigureDevicesAction();
+        registerDevicesModalSubmission();
         registerReconnectSpotifyAction();
 
         log.info("App Home handlers registered successfully");
@@ -346,6 +354,283 @@ public class AppHomeHandler {
                 return ctx.ack();
             } catch (Exception e) {
                 log.error("Error handling working hours modal submission", e);
+                return ctx.ack();
+            }
+        });
+    }
+
+    /**
+     * Handles "Configure Emoji" button click - opens modal.
+     */
+    private void registerConfigureEmojiAction() {
+        slackApp.blockAction("configure_emoji", (req, ctx) -> {
+            try {
+                String userId = req.getPayload().getUser().getId();
+                log.info("User {} clicked Configure Emoji", userId);
+
+                Optional<User> userOpt = userService.findBySlackUserId(userId);
+                if (userOpt.isEmpty()) {
+                    return ctx.ack();
+                }
+
+                User user = userOpt.get();
+                Optional<UserSettings> settingsOpt = userService.getUserSettings(user.getId());
+                if (settingsOpt.isEmpty()) {
+                    return ctx.ack();
+                }
+
+                UserSettings settings = settingsOpt.get();
+                View modalView = buildEmojiModal(settings);
+
+                // Open modal
+                ctx.client().viewsOpen(r -> r
+                        .triggerId(req.getPayload().getTriggerId())
+                        .view(modalView)
+                );
+
+                return ctx.ack();
+            } catch (Exception e) {
+                log.error("Error handling configure_emoji action", e);
+                return ctx.ack();
+            }
+        });
+    }
+
+    /**
+     * Builds the emoji configuration modal.
+     */
+    private View buildEmojiModal(UserSettings settings) {
+        return view(view -> view
+                .type("modal")
+                .callbackId("emoji_modal")
+                .title(viewTitle(title -> title.type("plain_text").text("Configure Emoji")))
+                .submit(viewSubmit(submit -> submit.type("plain_text").text("Save")))
+                .close(viewClose(close -> close.type("plain_text").text("Cancel")))
+                .blocks(asBlocks(
+                        section(section -> section.text(markdownText(
+                                "*Choose your status emoji*\n\n" +
+                                "This emoji will appear in your Slack status when music is playing."
+                        ))),
+                        input(input -> input
+                                .blockId("emoji_input")
+                                .label(plainText("Emoji"))
+                                .element(plainTextInput(plainTextInput -> plainTextInput
+                                        .actionId("emoji_value")
+                                        .initialValue(settings.getDefaultEmoji())
+                                        .placeholder(plainText("e.g., :musical_note: or :headphones:"))
+                                ))
+                        ),
+                        context(context -> context.elements(asContextElements(
+                                markdownText(":information_source: Enter emoji using Slack format like :musical_note: or :headphones:")
+                        )))
+                ))
+        );
+    }
+
+    /**
+     * Handles emoji modal submission.
+     */
+    private void registerEmojiModalSubmission() {
+        slackApp.viewSubmission("emoji_modal", (req, ctx) -> {
+            try {
+                String userId = req.getPayload().getUser().getId();
+                log.info("User {} submitted emoji modal", userId);
+
+                Map<String, Map<String, com.slack.api.model.view.ViewState.Value>> stateValues =
+                        req.getPayload().getView().getState().getValues();
+
+                // Extract emoji
+                String emoji = stateValues.get("emoji_input").get("emoji_value").getValue();
+
+                if (emoji == null || emoji.trim().isEmpty()) {
+                    emoji = ":musical_note:"; // Default fallback
+                }
+
+                log.debug("Emoji submission: emoji={}", emoji);
+
+                // Get user
+                Optional<User> userOpt = userService.findBySlackUserId(userId);
+                if (userOpt.isEmpty()) {
+                    return ctx.ack();
+                }
+
+                User user = userOpt.get();
+
+                // Update emoji
+                userService.updateDefaultEmoji(user.getId(), emoji.trim());
+
+                log.info("Updated emoji for user {}: {}", userId, emoji);
+
+                // Refresh home view
+                appHomeService.publishHomeView(userId, ctx.getBotToken());
+
+                return ctx.ack();
+            } catch (Exception e) {
+                log.error("Error handling emoji modal submission", e);
+                return ctx.ack();
+            }
+        });
+    }
+
+    /**
+     * Handles "Configure Devices" button click - opens modal.
+     */
+    private void registerConfigureDevicesAction() {
+        slackApp.blockAction("configure_devices", (req, ctx) -> {
+            try {
+                String userId = req.getPayload().getUser().getId();
+                log.info("User {} clicked Configure Devices", userId);
+
+                Optional<User> userOpt = userService.findBySlackUserId(userId);
+                if (userOpt.isEmpty()) {
+                    return ctx.ack();
+                }
+
+                User user = userOpt.get();
+                Optional<UserSettings> settingsOpt = userService.getUserSettings(user.getId());
+                if (settingsOpt.isEmpty()) {
+                    return ctx.ack();
+                }
+
+                // Get available Spotify devices
+                List<SpotifyDevice> devices = spotifyService.getAvailableDevices(user);
+
+                UserSettings settings = settingsOpt.get();
+                View modalView = buildDevicesModal(settings, devices);
+
+                // Open modal
+                ctx.client().viewsOpen(r -> r
+                        .triggerId(req.getPayload().getTriggerId())
+                        .view(modalView)
+                );
+
+                return ctx.ack();
+            } catch (Exception e) {
+                log.error("Error handling configure_devices action", e);
+                return ctx.ack();
+            }
+        });
+    }
+
+    /**
+     * Builds the devices configuration modal.
+     */
+    private View buildDevicesModal(UserSettings settings, List<SpotifyDevice> devices) {
+        if (devices.isEmpty()) {
+            // No devices available
+            return view(view -> view
+                    .type("modal")
+                    .callbackId("devices_modal")
+                    .title(viewTitle(title -> title.type("plain_text").text("Select Devices")))
+                    .close(viewClose(close -> close.type("plain_text").text("Close")))
+                    .blocks(asBlocks(
+                            section(section -> section.text(markdownText(
+                                    "*No devices found*\n\n" +
+                                    "Make sure you have Spotify open on at least one device and try again."
+                            )))
+                    ))
+            );
+        }
+
+        // Build checkbox options from devices
+        List<com.slack.api.model.block.composition.OptionObject> options = new ArrayList<>();
+        List<com.slack.api.model.block.composition.OptionObject> initialOptions = new ArrayList<>();
+
+        for (SpotifyDevice device : devices) {
+            String deviceLabel = device.getName() + " (" + device.getType() + ")";
+            if (device.isActive()) {
+                deviceLabel += " - Active";
+            }
+
+            var option = option(opt -> opt
+                    .value(device.getId())
+                    .text(plainText(deviceLabel))
+            );
+
+            options.add(option);
+
+            // Check if this device should be initially selected
+            if (settings.getAllowedDeviceIds() != null &&
+                settings.getAllowedDeviceIds().contains(device.getId())) {
+                initialOptions.add(option);
+            }
+        }
+
+        return view(view -> view
+                .type("modal")
+                .callbackId("devices_modal")
+                .title(viewTitle(title -> title.type("plain_text").text("Select Devices")))
+                .submit(viewSubmit(submit -> submit.type("plain_text").text("Save")))
+                .close(viewClose(close -> close.type("plain_text").text("Cancel")))
+                .blocks(asBlocks(
+                        section(section -> section.text(markdownText(
+                                "*Select which devices to track*\n\n" +
+                                "Trackify will only sync when playing on these devices. " +
+                                "Leave all unchecked to track all devices."
+                        ))),
+                        input(input -> input
+                                .blockId("devices_selection")
+                                .label(plainText("Devices"))
+                                .element(checkboxes(checkboxes -> checkboxes
+                                        .actionId("devices_checkboxes")
+                                        .options(options)
+                                        .initialOptions(initialOptions.isEmpty() ? null : initialOptions)
+                                ))
+                                .optional(true)
+                        ),
+                        context(context -> context.elements(asContextElements(
+                                markdownText(":information_source: If no devices are selected, all devices will be tracked")
+                        )))
+                ))
+        );
+    }
+
+    /**
+     * Handles devices modal submission.
+     */
+    private void registerDevicesModalSubmission() {
+        slackApp.viewSubmission("devices_modal", (req, ctx) -> {
+            try {
+                String userId = req.getPayload().getUser().getId();
+                log.info("User {} submitted devices modal", userId);
+
+                Map<String, Map<String, com.slack.api.model.view.ViewState.Value>> stateValues =
+                        req.getPayload().getView().getState().getValues();
+
+                // Extract selected devices
+                List<String> selectedDeviceIds = new ArrayList<>();
+                if (stateValues.containsKey("devices_selection")) {
+                    var devicesValue = stateValues.get("devices_selection").get("devices_checkboxes");
+                    if (devicesValue != null && devicesValue.getSelectedOptions() != null) {
+                        for (var option : devicesValue.getSelectedOptions()) {
+                            selectedDeviceIds.add(option.getValue());
+                        }
+                    }
+                }
+
+                log.debug("Devices submission: selected={}", selectedDeviceIds);
+
+                // Get user
+                Optional<User> userOpt = userService.findBySlackUserId(userId);
+                if (userOpt.isEmpty()) {
+                    return ctx.ack();
+                }
+
+                User user = userOpt.get();
+
+                // Update devices (null if empty to indicate "all devices")
+                userService.updateAllowedDevices(user.getId(),
+                        selectedDeviceIds.isEmpty() ? null : selectedDeviceIds);
+
+                log.info("Updated allowed devices for user {}: {}",
+                        userId, selectedDeviceIds.isEmpty() ? "all devices" : selectedDeviceIds);
+
+                // Refresh home view
+                appHomeService.publishHomeView(userId, ctx.getBotToken());
+
+                return ctx.ack();
+            } catch (Exception e) {
+                log.error("Error handling devices modal submission", e);
                 return ctx.ack();
             }
         });

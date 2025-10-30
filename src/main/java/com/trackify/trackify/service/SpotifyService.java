@@ -4,6 +4,7 @@ import com.trackify.trackify.config.SpotifyConfig;
 import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.exception.*;
 import com.trackify.trackify.model.CurrentlyPlayingTrackInfo;
+import com.trackify.trackify.model.SpotifyDevice;
 import com.trackify.trackify.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,10 @@ import se.michaelthelin.spotify.requests.authorization.authorization_code.Author
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -63,6 +68,56 @@ public class SpotifyService {
         return refreshRequest.execute();
     }
 
+    /**
+     * Gets the list of available Spotify devices for a user.
+     */
+    public List<SpotifyDevice> getAvailableDevices(User user) {
+        try {
+            // Check if token needs refresh
+            if (userService.isSpotifyTokenExpired(user)) {
+                log.debug("Spotify token expired for user {}, refreshing...", user.getId());
+                refreshUserToken(user);
+            }
+
+            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
+            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+
+            var request = spotifyApi.getUsersAvailableDevices().build();
+            var devices = request.execute();
+
+            if (devices == null || devices.length == 0) {
+                log.debug("No devices found for user {}", user.getId());
+                return new ArrayList<>();
+            }
+
+            return Arrays.stream(devices)
+                    .map(device -> SpotifyDevice.builder()
+                            .id(device.getId())
+                            .name(device.getName())
+                            .type(device.getType())
+                            .isActive(device.getIs_active())
+                            .build())
+                    .collect(Collectors.toList());
+
+        } catch (UnauthorizedException e) {
+            log.warn("Unauthorized error for user {}: {}", user.getSlackUserId(), e.getMessage());
+            handleSpotifyTokenError(user, e.getMessage());
+            return new ArrayList<>();
+        } catch (SpotifyWebApiException e) {
+            String errorMsg = e.getMessage();
+            if (tokenValidationService.isSpotifyTokenInvalidError(errorMsg)) {
+                log.warn("Token invalidation detected for user {}: {}", user.getSlackUserId(), errorMsg);
+                handleSpotifyTokenError(user, errorMsg);
+            } else {
+                log.error("Spotify API error for user {}: {}", user.getSlackUserId(), errorMsg);
+            }
+            return new ArrayList<>();
+        } catch (Exception e) {
+            log.error("Error fetching devices for user {}", user.getId(), e);
+            return new ArrayList<>();
+        }
+    }
+
     public CurrentlyPlayingTrackInfo getCurrentlyPlayingTrack(User user) {
         try {
             // Check if token needs refresh
@@ -86,6 +141,10 @@ public class SpotifyService {
                 Track track = (Track) currentlyPlaying.getItem();
                 String artistName = track.getArtists().length > 0 ? track.getArtists()[0].getName() : AppConstants.UNKNOWN_ARTIST;
 
+                // Get device information
+                String deviceId = currentlyPlaying.getDevice() != null ? currentlyPlaying.getDevice().getId() : null;
+                String deviceName = currentlyPlaying.getDevice() != null ? currentlyPlaying.getDevice().getName() : null;
+
                 return CurrentlyPlayingTrackInfo.builder()
                         .trackId(track.getId())
                         .trackName(track.getName())
@@ -93,6 +152,8 @@ public class SpotifyService {
                         .isPlaying(currentlyPlaying.getIs_playing())
                         .durationMs(track.getDurationMs())
                         .progressMs(currentlyPlaying.getProgress_ms())
+                        .deviceId(deviceId)
+                        .deviceName(deviceName)
                         .build();
             }
 
