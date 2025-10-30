@@ -156,6 +156,35 @@ public class UserService {
         log.debug("Set manual status flag for user {} to: {}", userId, manualStatusSet);
     }
 
+    @Transactional
+    public void updateWorkingHours(String userId, Integer startHourUtc, Integer endHourUtc, boolean enabled) {
+        UserSettings settings = userSettingsRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User settings not found"));
+
+        settings.setSyncStartHour(startHourUtc);
+        settings.setSyncEndHour(endHourUtc);
+        settings.setWorkingHoursEnabled(enabled);
+        settings.setUpdatedAt(LocalDateTime.now());
+
+        userSettingsRepository.save(settings);
+        log.info("Updated working hours for user {}: {} - {} UTC (enabled: {})",
+                userId, startHourUtc, endHourUtc, enabled);
+    }
+
+    @Transactional
+    public void setTokenInvalidated(String userId, boolean invalidated) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setTokenInvalidated(invalidated);
+        user.setTokenInvalidatedAt(invalidated ? LocalDateTime.now() : null);
+        user.setActive(!invalidated); // Deactivate user when token is invalidated
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+        log.info("Set token invalidated flag for user {} to: {}", userId, invalidated);
+    }
+
     public Optional<UserSettings> getUserSettings(String userId) {
         return userSettingsRepository.findByUserId(userId);
     }

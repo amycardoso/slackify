@@ -47,6 +47,11 @@ public class User {
 
     private boolean manualStatusSet; // Flag indicating user manually changed their status
 
+    // Token invalidation tracking
+    private boolean tokenInvalidated; // Flag indicating Slack or Spotify token has been revoked
+
+    private LocalDateTime tokenInvalidatedAt; // When the token invalidation was detected
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

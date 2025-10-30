@@ -24,6 +24,7 @@ public class MongoDBInstallationService implements InstallationService {
 
     private final UserRepository userRepository;
     private final UserSettingsRepository userSettingsRepository;
+    private final SlackService slackService;
     private boolean historicalDataEnabled = false;
 
     @Override
@@ -79,6 +80,12 @@ public class MongoDBInstallationService implements InstallationService {
 
         // Create default UserSettings for new users
         if (existingUser.isEmpty()) {
+            // Fetch user's timezone from Slack
+            Integer timezoneOffset = slackService.getUserTimezoneOffset(
+                    installer.getInstallerUserAccessToken(),
+                    installer.getInstallerUserId()
+            );
+
             UserSettings defaultSettings = UserSettings.builder()
                     .userId(savedUser.getId())
                     .syncEnabled(true)
@@ -87,13 +94,15 @@ public class MongoDBInstallationService implements InstallationService {
                     .showArtist(true)
                     .showSongTitle(true)
                     .statusTemplate("{title} - {artist}")
+                    .timezoneOffsetSeconds(timezoneOffset)
+                    .workingHoursEnabled(false) // Sync 24/7 by default
                     .createdAt(java.time.LocalDateTime.now())
                     .updatedAt(java.time.LocalDateTime.now())
                     .build();
 
             UserSettings savedSettings = userSettingsRepository.save(defaultSettings);
-            log.info("=== DEFAULT USER SETTINGS CREATED === ID: {}, UserId: {}",
-                    savedSettings.getId(), savedSettings.getUserId());
+            log.info("=== DEFAULT USER SETTINGS CREATED === ID: {}, UserId: {}, Timezone: {}",
+                    savedSettings.getId(), savedSettings.getUserId(), timezoneOffset);
         }
 
         // Verify the save worked by immediately querying

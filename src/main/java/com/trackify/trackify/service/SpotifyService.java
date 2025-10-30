@@ -32,6 +32,7 @@ public class SpotifyService {
 
     private final SpotifyConfig spotifyConfig;
     private final UserService userService;
+    private final TokenValidationService tokenValidationService;
 
     public URI getAuthorizationUri() {
         SpotifyApi spotifyApi = getSpotifyApi(null);
@@ -96,10 +97,37 @@ public class SpotifyService {
             }
 
             return null;
+        } catch (UnauthorizedException e) {
+            // Token is invalid or expired
+            log.warn("Unauthorized error for user {}: {}", user.getSlackUserId(), e.getMessage());
+            handleSpotifyTokenError(user, e.getMessage());
+            return null;
+        } catch (SpotifyWebApiException e) {
+            // Check if error message indicates token invalidation
+            String errorMsg = e.getMessage();
+            if (tokenValidationService.isSpotifyTokenInvalidError(errorMsg)) {
+                log.warn("Token invalidation detected for user {}: {}", user.getSlackUserId(), errorMsg);
+                handleSpotifyTokenError(user, errorMsg);
+            } else {
+                log.error("Spotify API error for user {}: {}", user.getSlackUserId(), errorMsg);
+            }
+            return null;
         } catch (Exception e) {
             log.error("Error fetching currently playing track for user {}", user.getId(), e);
             return null;
         }
+    }
+
+    /**
+     * Handles Spotify token errors by checking if token should be invalidated.
+     */
+    private void handleSpotifyTokenError(User user, String errorMessage) {
+        // Mark user as invalidated in database
+        tokenValidationService.markUserAsInvalidated(user, errorMessage);
+
+        // Notification will be handled by App Home or separate notification service in the future
+        log.warn("Spotify token invalidated for user {}. User should be notified to reconnect.",
+                user.getSlackUserId());
     }
 
     public void pausePlayback(User user) {
@@ -149,16 +177,30 @@ public class SpotifyService {
     }
 
     private void refreshUserToken(User user) throws IOException, ParseException, SpotifyWebApiException {
-        String refreshToken = userService.getDecryptedSpotifyRefreshToken(user);
-        AuthorizationCodeCredentials credentials = refreshAccessToken(refreshToken);
+        try {
+            String refreshToken = userService.getDecryptedSpotifyRefreshToken(user);
+            AuthorizationCodeCredentials credentials = refreshAccessToken(refreshToken);
 
-        userService.updateSpotifyTokens(
-                user.getId(),
-                user.getSpotifyUserId(),
-                credentials.getAccessToken(),
-                credentials.getRefreshToken() != null ? credentials.getRefreshToken() : refreshToken,
-                credentials.getExpiresIn()
-        );
+            userService.updateSpotifyTokens(
+                    user.getId(),
+                    user.getSpotifyUserId(),
+                    credentials.getAccessToken(),
+                    credentials.getRefreshToken() != null ? credentials.getRefreshToken() : refreshToken,
+                    credentials.getExpiresIn()
+            );
+        } catch (SpotifyWebApiException e) {
+            // Check if this is an "invalid_grant" error (token revoked)
+            String errorMsg = e.getMessage();
+            if (tokenValidationService.isSpotifyTokenInvalidError(errorMsg)) {
+                log.error("Token refresh failed - token has been revoked for user {}: {}",
+                        user.getSlackUserId(), errorMsg);
+                handleSpotifyTokenError(user, errorMsg);
+                throw e; // Re-throw to stop sync
+            } else {
+                // Other error, re-throw
+                throw e;
+            }
+        }
     }
 
     private SpotifyApi getSpotifyApi(String accessToken) {
