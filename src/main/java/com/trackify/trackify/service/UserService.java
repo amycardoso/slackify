@@ -172,6 +172,31 @@ public class UserService {
     }
 
     @Transactional
+    public void updateAllowedDevices(String userId, List<String> deviceIds) {
+        UserSettings settings = userSettingsRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User settings not found"));
+
+        settings.setAllowedDeviceIds(deviceIds);
+        settings.setUpdatedAt(LocalDateTime.now());
+
+        userSettingsRepository.save(settings);
+        log.info("Updated allowed devices for user {}: {}", userId,
+                deviceIds == null ? "all devices" : String.join(", ", deviceIds));
+    }
+
+    @Transactional
+    public void updateDefaultEmoji(String userId, String emoji) {
+        UserSettings settings = userSettingsRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User settings not found"));
+
+        settings.setDefaultEmoji(emoji);
+        settings.setUpdatedAt(LocalDateTime.now());
+
+        userSettingsRepository.save(settings);
+        log.info("Updated default emoji for user {}: {}", userId, emoji);
+    }
+
+    @Transactional
     public void setTokenInvalidated(String userId, boolean invalidated) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));

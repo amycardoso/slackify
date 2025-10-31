@@ -12,4 +12,6 @@ public class CurrentlyPlayingTrackInfo {
     private boolean isPlaying;
     private Integer durationMs; // Track duration in milliseconds
     private Integer progressMs; // Current playback position in milliseconds
+    private String deviceId; // Spotify device ID
+    private String deviceName; // Spotify device name
 }

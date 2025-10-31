@@ -139,6 +139,11 @@ public class AppHomeService {
 
                         divider(),
 
+                        // Device Tracking Section
+                        buildDeviceTrackingSection(settings),
+
+                        divider(),
+
                         // Action Buttons
                         buildActionButtons(settings, tokenInvalidated),
 
@@ -221,6 +226,23 @@ public class AppHomeService {
     }
 
     /**
+     * Builds the device tracking section showing configured devices.
+     */
+    private com.slack.api.model.block.LayoutBlock buildDeviceTrackingSection(UserSettings settings) {
+        String deviceText;
+
+        if (settings.getAllowedDeviceIds() == null || settings.getAllowedDeviceIds().isEmpty()) {
+            deviceText = "*:computer: Device Tracking*\n\n*Tracking:* All devices";
+        } else {
+            int deviceCount = settings.getAllowedDeviceIds().size();
+            deviceText = String.format("*:computer: Device Tracking*\n\n*Tracking:* %d selected device%s",
+                    deviceCount, deviceCount == 1 ? "" : "s");
+        }
+
+        return section(section -> section.text(markdownText(deviceText)));
+    }
+
+    /**
      * Builds action buttons for sync control, settings, and reconnection.
      */
     private com.slack.api.model.block.LayoutBlock buildActionButtons(
@@ -239,7 +261,7 @@ public class AppHomeService {
                     ))
             );
         } else {
-            // Show normal action buttons
+            // Show normal action buttons (up to 5 elements allowed in actions block)
             return actions(actions -> actions
                     .blockId("home_actions")
                     .elements(asElements(
@@ -249,12 +271,20 @@ public class AppHomeService {
                                     .style(settings.isSyncEnabled() ? "danger" : "primary")
                             ),
                             button(button -> button
-                                    .actionId("configure_working_hours")
-                                    .text(plainText("Configure Working Hours"))
-                            ),
-                            button(button -> button
                                     .actionId("manual_sync")
                                     .text(plainText("Sync Now"))
+                            ),
+                            button(button -> button
+                                    .actionId("configure_emoji")
+                                    .text(plainText("Configure Emoji"))
+                            ),
+                            button(button -> button
+                                    .actionId("configure_working_hours")
+                                    .text(plainText("Working Hours"))
+                            ),
+                            button(button -> button
+                                    .actionId("configure_devices")
+                                    .text(plainText("Select Devices"))
                             )
                     ))
             );

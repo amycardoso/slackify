@@ -71,6 +71,14 @@ public class MusicSyncService {
             return;
         }
 
+        // Check if device is allowed
+        if (!isDeviceAllowed(user, currentTrack.getDeviceId())) {
+            log.debug("User {} is playing on non-tracked device '{}', skipping sync",
+                    user.getSlackUserId(), currentTrack.getDeviceName());
+            handleNoTrackPlaying(user); // Clear status if device is not allowed
+            return;
+        }
+
         boolean trackChanged = hasTrackChanged(user, currentTrack);
         boolean needsExpirationRefresh = shouldRefreshExpiration(currentTrack);
         boolean shouldUpdateStatus = trackChanged || needsExpirationRefresh;
@@ -167,6 +175,41 @@ public class MusicSyncService {
         }
 
         return !previousTrackId.equals(currentTrack.getTrackId());
+    }
+
+    /**
+     * Checks if the current device is in the list of allowed devices.
+     * Returns true if no device filter is configured (all devices allowed) or if device is in the list.
+     * Returns false if device filter is configured and device is not in the list.
+     */
+    private boolean isDeviceAllowed(User user, String deviceId) {
+        if (deviceId == null) {
+            log.debug("No device ID available for user {}, allowing sync", user.getSlackUserId());
+            return true; // If no device info, allow sync
+        }
+
+        var settings = userService.getUserSettings(user.getId());
+
+        if (settings.isEmpty()) {
+            log.warn("No settings found for user {}, allowing sync", user.getSlackUserId());
+            return true; // No settings = allow sync
+        }
+
+        var userSettings = settings.get();
+
+        // If no device filter configured, allow all devices
+        if (userSettings.getAllowedDeviceIds() == null || userSettings.getAllowedDeviceIds().isEmpty()) {
+            return true;
+        }
+
+        // Check if current device is in the allowed list
+        boolean isAllowed = userSettings.getAllowedDeviceIds().contains(deviceId);
+
+        if (!isAllowed) {
+            log.debug("Device {} not in allowed list for user {}", deviceId, user.getSlackUserId());
+        }
+
+        return isAllowed;
     }
 
     /**
