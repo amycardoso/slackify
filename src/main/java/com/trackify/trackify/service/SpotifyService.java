@@ -18,6 +18,7 @@ import se.michaelthelin.spotify.exceptions.detailed.TooManyRequestsException;
 import se.michaelthelin.spotify.exceptions.detailed.UnauthorizedException;
 import se.michaelthelin.spotify.model_objects.credentials.AuthorizationCodeCredentials;
 import se.michaelthelin.spotify.model_objects.miscellaneous.CurrentlyPlaying;
+import se.michaelthelin.spotify.model_objects.miscellaneous.CurrentlyPlayingContext;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRefreshRequest;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRequest;
@@ -128,28 +129,28 @@ public class SpotifyService {
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
             SpotifyApi spotifyApi = getSpotifyApi(accessToken);
 
-            var request = spotifyApi.getUsersCurrentlyPlayingTrack().build();
-            CurrentlyPlaying currentlyPlaying = request.execute();
+            var contextRequest = spotifyApi.getInformationAboutUsersCurrentPlayback().build();
+            CurrentlyPlayingContext context = contextRequest.execute();
 
-            if (currentlyPlaying == null || currentlyPlaying.getItem() == null) {
+            if (context == null || context.getItem() == null || !context.getIs_playing()) {
                 log.debug("No track currently playing for user {}", user.getId());
                 return null;
             }
 
-            if (currentlyPlaying.getItem() instanceof Track) {
-                Track track = (Track) currentlyPlaying.getItem();
+            if (context.getItem() instanceof Track) {
+                Track track = (Track) context.getItem();
                 String artistName = track.getArtists().length > 0 ? track.getArtists()[0].getName() : AppConstants.UNKNOWN_ARTIST;
 
-                String deviceId = currentlyPlaying.getDevice() != null ? currentlyPlaying.getDevice().getId() : null;
-                String deviceName = currentlyPlaying.getDevice() != null ? currentlyPlaying.getDevice().getName() : null;
+                String deviceId = context.getDevice() != null ? context.getDevice().getId() : null;
+                String deviceName = context.getDevice() != null ? context.getDevice().getName() : null;
 
                 return CurrentlyPlayingTrackInfo.builder()
                         .trackId(track.getId())
                         .trackName(track.getName())
                         .artistName(artistName)
-                        .isPlaying(currentlyPlaying.getIs_playing())
+                        .isPlaying(context.getIs_playing())
                         .durationMs(track.getDurationMs())
-                        .progressMs(currentlyPlaying.getProgress_ms())
+                        .progressMs(context.getProgress_ms())
                         .deviceId(deviceId)
                         .deviceName(deviceName)
                         .build();
