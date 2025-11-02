@@ -479,10 +479,8 @@ public class AppHomeHandler {
         List<com.slack.api.model.block.composition.OptionObject> initialOptions = new ArrayList<>();
 
         for (SpotifyDevice device : devices) {
-            String deviceLabel = device.getName() + " (" + device.getType() + ")";
-            if (device.isActive()) {
-                deviceLabel += " - Active";
-            }
+            final String deviceLabel = device.getName() + " (" + device.getType() + ")" +
+                    (device.isActive() ? " - Active" : "");
 
             var option = option(opt -> opt
                     .value(device.getId())
