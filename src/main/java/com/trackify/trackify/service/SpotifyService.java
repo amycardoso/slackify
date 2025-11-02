@@ -69,15 +69,32 @@ public class SpotifyService {
     }
 
     /**
+     * Ensures the user has a valid, non-expired Spotify access token.
+     * Automatically refreshes the token if it's expired or about to expire.
+     * This method should be called before any Spotify API operation.
+     *
+     * @param user The user whose token to validate
+     * @return Updated user object with fresh token (or same user if no refresh needed)
+     * @throws IOException, ParseException, SpotifyWebApiException if token refresh fails
+     */
+    private User ensureValidToken(User user) throws IOException, ParseException, SpotifyWebApiException {
+        if (userService.isSpotifyTokenExpired(user)) {
+            log.debug("Spotify token expired or expiring soon for user {}, refreshing...", user.getSlackUserId());
+            refreshUserToken(user);
+            // Reload user to get updated token from database
+            return userService.findBySlackUserId(user.getSlackUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found after token refresh"));
+        }
+        return user;
+    }
+
+    /**
      * Gets the list of available Spotify devices for a user.
      */
     public List<SpotifyDevice> getAvailableDevices(User user) {
         try {
-            // Check if token needs refresh
-            if (userService.isSpotifyTokenExpired(user)) {
-                log.debug("Spotify token expired for user {}, refreshing...", user.getId());
-                refreshUserToken(user);
-            }
+            // Ensure token is valid before API call (refreshes if needed and returns updated user)
+            user = ensureValidToken(user);
 
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
             SpotifyApi spotifyApi = getSpotifyApi(accessToken);
@@ -120,11 +137,8 @@ public class SpotifyService {
 
     public CurrentlyPlayingTrackInfo getCurrentlyPlayingTrack(User user) {
         try {
-            // Check if token needs refresh
-            if (userService.isSpotifyTokenExpired(user)) {
-                log.debug("Spotify token expired for user {}, refreshing...", user.getId());
-                refreshUserToken(user);
-            }
+            // Ensure token is valid before API call (refreshes if needed and returns updated user)
+            user = ensureValidToken(user);
 
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
             SpotifyApi spotifyApi = getSpotifyApi(accessToken);
@@ -192,19 +206,35 @@ public class SpotifyService {
     }
 
     public void pausePlayback(User user) {
-        executePlayerCommand(user, "pause", () -> {
-            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
-            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
-            spotifyApi.pauseUsersPlayback().build().execute();
-        });
+        try {
+            // Ensure token is valid before API call (refreshes if needed and returns updated user)
+            final User refreshedUser = ensureValidToken(user);
+
+            executePlayerCommand(refreshedUser, "pause", () -> {
+                String accessToken = userService.getDecryptedSpotifyAccessToken(refreshedUser);
+                SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+                spotifyApi.pauseUsersPlayback().build().execute();
+            });
+        } catch (IOException | ParseException | SpotifyWebApiException e) {
+            log.error("Failed to refresh token for user {}", user.getSlackUserId(), e);
+            throw new SpotifyTokenExpiredException();
+        }
     }
 
     public void resumePlayback(User user) {
-        executePlayerCommand(user, "resume", () -> {
-            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
-            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
-            spotifyApi.startResumeUsersPlayback().build().execute();
-        });
+        try {
+            // Ensure token is valid before API call (refreshes if needed and returns updated user)
+            final User refreshedUser = ensureValidToken(user);
+
+            executePlayerCommand(refreshedUser, "resume", () -> {
+                String accessToken = userService.getDecryptedSpotifyAccessToken(refreshedUser);
+                SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+                spotifyApi.startResumeUsersPlayback().build().execute();
+            });
+        } catch (IOException | ParseException | SpotifyWebApiException e) {
+            log.error("Failed to refresh token for user {}", user.getSlackUserId(), e);
+            throw new SpotifyTokenExpiredException();
+        }
     }
 
     private void executePlayerCommand(User user, String operation, PlayerCommand command) {
@@ -239,6 +269,7 @@ public class SpotifyService {
 
     private void refreshUserToken(User user) throws IOException, ParseException, SpotifyWebApiException {
         try {
+            log.info("Refreshing Spotify token for user {}", user.getSlackUserId());
             String refreshToken = userService.getDecryptedSpotifyRefreshToken(user);
             AuthorizationCodeCredentials credentials = refreshAccessToken(refreshToken);
 
@@ -249,6 +280,8 @@ public class SpotifyService {
                     credentials.getRefreshToken() != null ? credentials.getRefreshToken() : refreshToken,
                     credentials.getExpiresIn()
             );
+            log.info("Successfully refreshed Spotify token for user {}. New token expires in {} seconds",
+                    user.getSlackUserId(), credentials.getExpiresIn());
         } catch (SpotifyWebApiException e) {
             // Check if this is an "invalid_grant" error (token revoked)
             String errorMsg = e.getMessage();
@@ -259,6 +292,8 @@ public class SpotifyService {
                 throw e; // Re-throw to stop sync
             } else {
                 // Other error, re-throw
+                log.error("Failed to refresh Spotify token for user {}: {}",
+                        user.getSlackUserId(), errorMsg);
                 throw e;
             }
         }
