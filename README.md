@@ -62,7 +62,14 @@ cd trackify
    - Command: `/trackify`
    - Request URL: `http://localhost:8080/slack/events`
    - Description: "Control Trackify music sync"
-6. Navigate to "Basic Information":
+6. Navigate to "Event Subscriptions" and enable events (REQUIRED for Home Tab):
+   - Toggle "Enable Events" to On
+   - Request URL: `http://localhost:8080/slack/events`
+   - Subscribe to bot events: `app_home_opened`
+7. Navigate to "App Home" and enable the Home Tab (REQUIRED):
+   - Check "Home Tab"
+   - Check "Messages Tab"
+8. Navigate to "Basic Information":
    - Copy your **Client ID**, **Client Secret**, and **Signing Secret**
 
 ### 3. Configure Spotify App
@@ -303,6 +310,13 @@ docker-compose up -d
 ### Spotify Token Expired
 - Tokens automatically refresh when expired
 - If issues persist, re-authorize Spotify connection
+
+### Home Tab Not Loading
+- Verify "Event Subscriptions" is enabled in Slack App settings
+- Ensure `app_home_opened` event is subscribed under "Subscribe to bot events"
+- Check that "Home Tab" is enabled under "App Home" settings
+- Reinstall the app to workspace after configuration changes
+- Check application logs for errors when opening Home Tab
 
 ### Status Not Updating
 - Verify sync is enabled: `/trackify status`
