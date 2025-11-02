@@ -2,6 +2,7 @@ package com.trackify.trackify.config;
 
 import com.slack.api.bolt.App;
 import com.slack.api.bolt.AppConfig;
+import com.slack.api.bolt.model.builtin.DefaultBot;
 import com.slack.api.bolt.model.builtin.DefaultInstaller;
 import com.slack.api.bolt.service.builtin.oauth.OAuthErrorHandler;
 import com.slack.api.bolt.service.builtin.oauth.OAuthV2SuccessHandler;
@@ -72,20 +73,28 @@ public class SlackConfig {
         app.oauthCallback((OAuthV2SuccessHandler) (req, resp, oauthAccess) -> {
             String slackUserId = oauthAccess.getAuthedUser().getId();
             String teamId = oauthAccess.getTeam().getId();
-            String accessToken = oauthAccess.getAuthedUser().getAccessToken();
+            String userAccessToken = oauthAccess.getAuthedUser().getAccessToken();
+            String botAccessToken = oauthAccess.getAccessToken(); // Bot token for App Home
 
-            log.info("=== OAuth Callback - User: {}, Team: {}, Token present: {} ===",
-                    slackUserId, teamId, accessToken != null);
+            log.info("=== OAuth Callback - User: {}, Team: {}, User Token: {}, Bot Token: {} ===",
+                    slackUserId, teamId, userAccessToken != null, botAccessToken != null);
 
             try {
                 // Create Installer object from OAuth response
                 DefaultInstaller installer = new DefaultInstaller();
                 installer.setInstallerUserId(slackUserId);
                 installer.setTeamId(teamId);
-                installer.setInstallerUserAccessToken(accessToken);
+                installer.setInstallerUserAccessToken(userAccessToken);
 
-                // Explicitly save the user (Bolt doesn't call saveInstallerAndBot for user tokens)
+                // Create Bot object to save bot token
+                DefaultBot bot = new DefaultBot();
+                bot.setTeamId(teamId);
+                bot.setBotAccessToken(botAccessToken);
+                bot.setBotUserId(oauthAccess.getBotUserId());
+
+                // Save both installer (user) and bot tokens
                 installationService.saveInstallerAndBot(installer);
+                installationService.saveBot(bot);
 
                 // Get the user ID we just created/updated
                 String userId = installationService.findUserIdBySlackUserId(slackUserId);

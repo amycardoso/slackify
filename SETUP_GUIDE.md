@@ -90,13 +90,24 @@ docker run -d -p 27017:27017 --name trackify-mongodb mongo:7.0
    - Usage Hint: `[play|pause|status|help]`
    - Click "Save"
 
-5. **Enable Event Subscriptions (Optional)**
+5. **Enable Event Subscriptions (REQUIRED for Home Tab)**
    - In left sidebar, click "Event Subscriptions"
    - Toggle "Enable Events" to On
    - Request URL: `http://localhost:8080/slack/events`
-   - Wait for verification
+   - Wait for verification ✓
+   - Scroll down to "Subscribe to bot events"
+   - Click "Add Bot User Event"
+   - Add: `app_home_opened` (Required for Home Tab to work)
+   - Click "Save Changes"
 
-6. **Get Your Credentials**
+6. **Enable App Home Tab**
+   - In left sidebar, click "App Home"
+   - Under "Show Tabs" section:
+     - Check ✓ "Home Tab" (REQUIRED for Home UI)
+     - Check ✓ "Messages Tab" (for direct messages)
+   - Click "Save Changes"
+
+7. **Get Your Credentials**
    - Go to "Basic Information"
    - Under "App Credentials":
      - Copy **Client ID**
@@ -104,7 +115,14 @@ docker run -d -p 27017:27017 --name trackify-mongodb mongo:7.0
      - Copy **Signing Secret**
    - Save these for the next step
 
-### 4. Create Spotify App
+### 4. Reinstall the Slack App (if you already installed it before)
+
+If you previously installed the app without these event subscriptions:
+1. Go to "Install App" in left sidebar
+2. Click "Reinstall to Workspace"
+3. Authorize the updated permissions
+
+### 5. Create Spotify App
 
 1. **Go to Spotify Developer Dashboard**
    - Visit: https://developer.spotify.com/dashboard
@@ -124,7 +142,7 @@ docker run -d -p 27017:27017 --name trackify-mongodb mongo:7.0
    - Click "View Client Secret" and copy it
    - Save these for the next step
 
-### 5. Configure Environment Variables
+### 6. Configure Environment Variables
 
 1. **Copy the example file:**
    ```bash
@@ -170,7 +188,7 @@ docker run -d -p 27017:27017 --name trackify-mongodb mongo:7.0
    ENCRYPTION_SECRET_KEY=your_generated_key_from_step_2
    ```
 
-### 6. Build and Run the Application
+### 7. Build and Run the Application
 
 1. **Load environment variables:**
    ```bash
@@ -202,7 +220,7 @@ docker run -d -p 27017:27017 --name trackify-mongodb mongo:7.0
    - Open browser to http://localhost:8080
    - You should see the Trackify home page
 
-### 7. Test the Setup
+### 8. Test the Setup
 
 1. **Connect your accounts:**
    - Click "Get Started - Connect with Slack"
@@ -215,12 +233,19 @@ docker run -d -p 27017:27017 --name trackify-mongodb mongo:7.0
    - Type `/trackify help`
    - You should see the help message
 
-3. **Test music sync:**
+3. **Test the Home Tab:**
+   - Open Slack
+   - Go to "Apps" in the sidebar
+   - Click on "Trackify"
+   - Click the "Home" tab
+   - You should see your Home UI with connection status and settings!
+
+4. **Test music sync:**
    - Play a song on Spotify
    - Wait 10-15 seconds
    - Check your Slack status - it should update with the song info
 
-### 8. Using Docker (Optional)
+### 9. Using Docker (Optional)
 
 If you prefer Docker:
 
