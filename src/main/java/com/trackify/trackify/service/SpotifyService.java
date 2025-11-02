@@ -4,6 +4,7 @@ import com.trackify.trackify.config.SpotifyConfig;
 import com.trackify.trackify.constants.AppConstants;
 import com.trackify.trackify.exception.*;
 import com.trackify.trackify.model.CurrentlyPlayingTrackInfo;
+import com.trackify.trackify.model.SpotifyDevice;
 import com.trackify.trackify.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import se.michaelthelin.spotify.exceptions.detailed.TooManyRequestsException;
 import se.michaelthelin.spotify.exceptions.detailed.UnauthorizedException;
 import se.michaelthelin.spotify.model_objects.credentials.AuthorizationCodeCredentials;
 import se.michaelthelin.spotify.model_objects.miscellaneous.CurrentlyPlaying;
+import se.michaelthelin.spotify.model_objects.miscellaneous.CurrentlyPlayingContext;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRefreshRequest;
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeRequest;
@@ -24,6 +26,10 @@ import se.michaelthelin.spotify.requests.authorization.authorization_code.Author
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -63,47 +69,99 @@ public class SpotifyService {
         return refreshRequest.execute();
     }
 
-    public CurrentlyPlayingTrackInfo getCurrentlyPlayingTrack(User user) {
+    private User ensureValidToken(User user) throws IOException, ParseException, SpotifyWebApiException {
+        if (userService.isSpotifyTokenExpired(user)) {
+            log.debug("Spotify token expired or expiring soon for user {}, refreshing...", user.getSlackUserId());
+            refreshUserToken(user);
+            return userService.findBySlackUserId(user.getSlackUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found after token refresh"));
+        }
+        return user;
+    }
+
+    public List<SpotifyDevice> getAvailableDevices(User user) {
         try {
-            // Check if token needs refresh
-            if (userService.isSpotifyTokenExpired(user)) {
-                log.debug("Spotify token expired for user {}, refreshing...", user.getId());
-                refreshUserToken(user);
-            }
+            user = ensureValidToken(user);
 
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
             SpotifyApi spotifyApi = getSpotifyApi(accessToken);
 
-            var request = spotifyApi.getUsersCurrentlyPlayingTrack().build();
-            CurrentlyPlaying currentlyPlaying = request.execute();
+            var request = spotifyApi.getUsersAvailableDevices().build();
+            var devices = request.execute();
 
-            if (currentlyPlaying == null || currentlyPlaying.getItem() == null) {
+            if (devices == null || devices.length == 0) {
+                log.debug("No devices found for user {}", user.getId());
+                return new ArrayList<>();
+            }
+
+            return Arrays.stream(devices)
+                    .map(device -> SpotifyDevice.builder()
+                            .id(device.getId())
+                            .name(device.getName())
+                            .type(device.getType())
+                            .isActive(device.getIs_active())
+                            .build())
+                    .collect(Collectors.toList());
+
+        } catch (UnauthorizedException e) {
+            log.warn("Unauthorized error for user {}: {}", user.getSlackUserId(), e.getMessage());
+            handleSpotifyTokenError(user, e.getMessage());
+            return new ArrayList<>();
+        } catch (SpotifyWebApiException e) {
+            String errorMsg = e.getMessage();
+            if (tokenValidationService.isSpotifyTokenInvalidError(errorMsg)) {
+                log.warn("Token invalidation detected for user {}: {}", user.getSlackUserId(), errorMsg);
+                handleSpotifyTokenError(user, errorMsg);
+            } else {
+                log.error("Spotify API error for user {}: {}", user.getSlackUserId(), errorMsg);
+            }
+            return new ArrayList<>();
+        } catch (Exception e) {
+            log.error("Error fetching devices for user {}", user.getId(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    public CurrentlyPlayingTrackInfo getCurrentlyPlayingTrack(User user) {
+        try {
+            user = ensureValidToken(user);
+
+            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
+            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+
+            var contextRequest = spotifyApi.getInformationAboutUsersCurrentPlayback().build();
+            CurrentlyPlayingContext context = contextRequest.execute();
+
+            if (context == null || context.getItem() == null || !context.getIs_playing()) {
                 log.debug("No track currently playing for user {}", user.getId());
                 return null;
             }
 
-            if (currentlyPlaying.getItem() instanceof Track) {
-                Track track = (Track) currentlyPlaying.getItem();
+            if (context.getItem() instanceof Track) {
+                Track track = (Track) context.getItem();
                 String artistName = track.getArtists().length > 0 ? track.getArtists()[0].getName() : AppConstants.UNKNOWN_ARTIST;
+
+                String deviceId = context.getDevice() != null ? context.getDevice().getId() : null;
+                String deviceName = context.getDevice() != null ? context.getDevice().getName() : null;
 
                 return CurrentlyPlayingTrackInfo.builder()
                         .trackId(track.getId())
                         .trackName(track.getName())
                         .artistName(artistName)
-                        .isPlaying(currentlyPlaying.getIs_playing())
+                        .isPlaying(context.getIs_playing())
                         .durationMs(track.getDurationMs())
-                        .progressMs(currentlyPlaying.getProgress_ms())
+                        .progressMs(context.getProgress_ms())
+                        .deviceId(deviceId)
+                        .deviceName(deviceName)
                         .build();
             }
 
             return null;
         } catch (UnauthorizedException e) {
-            // Token is invalid or expired
             log.warn("Unauthorized error for user {}: {}", user.getSlackUserId(), e.getMessage());
             handleSpotifyTokenError(user, e.getMessage());
             return null;
         } catch (SpotifyWebApiException e) {
-            // Check if error message indicates token invalidation
             String errorMsg = e.getMessage();
             if (tokenValidationService.isSpotifyTokenInvalidError(errorMsg)) {
                 log.warn("Token invalidation detected for user {}: {}", user.getSlackUserId(), errorMsg);
@@ -118,32 +176,40 @@ public class SpotifyService {
         }
     }
 
-    /**
-     * Handles Spotify token errors by checking if token should be invalidated.
-     */
     private void handleSpotifyTokenError(User user, String errorMessage) {
-        // Mark user as invalidated in database
         tokenValidationService.markUserAsInvalidated(user, errorMessage);
-
-        // Notification will be handled by App Home or separate notification service in the future
         log.warn("Spotify token invalidated for user {}. User should be notified to reconnect.",
                 user.getSlackUserId());
     }
 
     public void pausePlayback(User user) {
-        executePlayerCommand(user, "pause", () -> {
-            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
-            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
-            spotifyApi.pauseUsersPlayback().build().execute();
-        });
+        try {
+            final User refreshedUser = ensureValidToken(user);
+
+            executePlayerCommand(refreshedUser, "pause", () -> {
+                String accessToken = userService.getDecryptedSpotifyAccessToken(refreshedUser);
+                SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+                spotifyApi.pauseUsersPlayback().build().execute();
+            });
+        } catch (IOException | ParseException | SpotifyWebApiException e) {
+            log.error("Failed to refresh token for user {}", user.getSlackUserId(), e);
+            throw new SpotifyTokenExpiredException();
+        }
     }
 
     public void resumePlayback(User user) {
-        executePlayerCommand(user, "resume", () -> {
-            String accessToken = userService.getDecryptedSpotifyAccessToken(user);
-            SpotifyApi spotifyApi = getSpotifyApi(accessToken);
-            spotifyApi.startResumeUsersPlayback().build().execute();
-        });
+        try {
+            final User refreshedUser = ensureValidToken(user);
+
+            executePlayerCommand(refreshedUser, "resume", () -> {
+                String accessToken = userService.getDecryptedSpotifyAccessToken(refreshedUser);
+                SpotifyApi spotifyApi = getSpotifyApi(accessToken);
+                spotifyApi.startResumeUsersPlayback().build().execute();
+            });
+        } catch (IOException | ParseException | SpotifyWebApiException e) {
+            log.error("Failed to refresh token for user {}", user.getSlackUserId(), e);
+            throw new SpotifyTokenExpiredException();
+        }
     }
 
     private void executePlayerCommand(User user, String operation, PlayerCommand command) {
@@ -178,6 +244,7 @@ public class SpotifyService {
 
     private void refreshUserToken(User user) throws IOException, ParseException, SpotifyWebApiException {
         try {
+            log.info("Refreshing Spotify token for user {}", user.getSlackUserId());
             String refreshToken = userService.getDecryptedSpotifyRefreshToken(user);
             AuthorizationCodeCredentials credentials = refreshAccessToken(refreshToken);
 
@@ -188,16 +255,18 @@ public class SpotifyService {
                     credentials.getRefreshToken() != null ? credentials.getRefreshToken() : refreshToken,
                     credentials.getExpiresIn()
             );
+            log.info("Successfully refreshed Spotify token for user {}. New token expires in {} seconds",
+                    user.getSlackUserId(), credentials.getExpiresIn());
         } catch (SpotifyWebApiException e) {
-            // Check if this is an "invalid_grant" error (token revoked)
             String errorMsg = e.getMessage();
             if (tokenValidationService.isSpotifyTokenInvalidError(errorMsg)) {
                 log.error("Token refresh failed - token has been revoked for user {}: {}",
                         user.getSlackUserId(), errorMsg);
                 handleSpotifyTokenError(user, errorMsg);
-                throw e; // Re-throw to stop sync
+                throw e;
             } else {
-                // Other error, re-throw
+                log.error("Failed to refresh Spotify token for user {}: {}",
+                        user.getSlackUserId(), errorMsg);
                 throw e;
             }
         }

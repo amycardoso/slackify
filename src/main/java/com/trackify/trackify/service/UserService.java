@@ -99,7 +99,7 @@ public class UserService {
         if (user.getSpotifyTokenExpiresAt() == null) {
             return true;
         }
-        return LocalDateTime.now().isAfter(user.getSpotifyTokenExpiresAt());
+        return LocalDateTime.now().plusMinutes(5).isAfter(user.getSpotifyTokenExpiresAt());
     }
 
     @Transactional
@@ -169,6 +169,31 @@ public class UserService {
         userSettingsRepository.save(settings);
         log.info("Updated working hours for user {}: {} - {} UTC (enabled: {})",
                 userId, startHourUtc, endHourUtc, enabled);
+    }
+
+    @Transactional
+    public void updateAllowedDevices(String userId, List<String> deviceIds) {
+        UserSettings settings = userSettingsRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User settings not found"));
+
+        settings.setAllowedDeviceIds(deviceIds);
+        settings.setUpdatedAt(LocalDateTime.now());
+
+        userSettingsRepository.save(settings);
+        log.info("Updated allowed devices for user {}: {}", userId,
+                deviceIds == null ? "all devices" : String.join(", ", deviceIds));
+    }
+
+    @Transactional
+    public void updateDefaultEmoji(String userId, String emoji) {
+        UserSettings settings = userSettingsRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("User settings not found"));
+
+        settings.setDefaultEmoji(emoji);
+        settings.setUpdatedAt(LocalDateTime.now());
+
+        userSettingsRepository.save(settings);
+        log.info("Updated default emoji for user {}: {}", userId, emoji);
     }
 
     @Transactional
