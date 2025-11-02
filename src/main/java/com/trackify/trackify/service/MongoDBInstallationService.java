@@ -115,6 +115,34 @@ public class MongoDBInstallationService implements InstallationService {
     }
 
     @Override
+    public void saveBot(Bot bot) throws Exception {
+        log.info("=== SAVE BOT CALLED ===");
+        log.info("TeamId: {}, BotAccessToken present: {}",
+                bot.getTeamId(), bot.getBotAccessToken() != null);
+
+        if (bot.getTeamId() == null) {
+            log.error("Bot teamId is null! Cannot save bot.");
+            throw new IllegalArgumentException("Bot teamId cannot be null");
+        }
+
+        // Find user by team ID and update with bot token
+        Optional<User> userOpt = userRepository.findBySlackTeamId(bot.getTeamId());
+
+        if (userOpt.isEmpty()) {
+            log.error("No user found for teamId: {} - cannot save bot token", bot.getTeamId());
+            return;
+        }
+
+        User user = userOpt.get();
+        user.setSlackBotToken(bot.getBotAccessToken());
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+
+        userRepository.save(user);
+        log.info("=== BOT TOKEN SAVED === UserId: {}, TeamId: {}",
+                user.getId(), user.getSlackTeamId());
+    }
+
+    @Override
     public void deleteBot(Bot bot) throws Exception {
         if (bot != null && bot.getEnterpriseId() != null) {
             userRepository.findBySlackTeamId(bot.getEnterpriseId())
@@ -143,17 +171,18 @@ public class MongoDBInstallationService implements InstallationService {
 
         User user = userOpt.get();
 
-        // Create Bot object with user token (we don't use bot tokens)
+        // Create Bot object with actual bot token
         DefaultBot bot = new DefaultBot();
         bot.setEnterpriseId(enterpriseId);
         bot.setTeamId(teamId);
-        bot.setScope("users.profile:write,users.profile:read");
-        bot.setBotAccessToken(user.getSlackAccessToken()); // Using user token as bot token
+        bot.setScope("commands,app_mentions:read,chat:write");
+        bot.setBotAccessToken(user.getSlackBotToken()); // Use actual bot token for App Home
         bot.setBotUserId(user.getSlackUserId());
         bot.setInstalledAt(user.getCreatedAt() != null ?
             user.getCreatedAt().atZone(ZoneId.systemDefault()).toEpochSecond() : null);
 
-        log.info("Found installation for teamId: {}", teamId);
+        log.info("Found bot installation for teamId: {}, bot token present: {}",
+                teamId, user.getSlackBotToken() != null);
         return bot;
     }
 
