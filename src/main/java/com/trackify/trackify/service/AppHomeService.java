@@ -32,10 +32,6 @@ public class AppHomeService {
     private final TimezoneService timezoneService;
     private final com.slack.api.Slack slack = com.slack.api.Slack.getInstance();
 
-    /**
-     * Publishes the App Home view for a user.
-     * This is called when a user opens the App Home tab.
-     */
     public void publishHomeView(String slackUserId, String slackAccessToken) {
         try {
             Optional<User> userOpt = userService.findBySlackUserId(slackUserId);
@@ -62,9 +58,6 @@ public class AppHomeService {
         }
     }
 
-    /**
-     * Builds the home view for users who haven't connected their accounts yet.
-     */
     private View buildNotConnectedView() {
         return view(view -> view
                 .type("home")
@@ -93,15 +86,11 @@ public class AppHomeService {
         );
     }
 
-    /**
-     * Builds the home view for connected users showing their status and settings.
-     */
     private View buildConnectedView(User user, UserSettings settings) {
         if (settings == null) {
-            return buildNotConnectedView(); // Fallback if settings missing
+            return buildNotConnectedView();
         }
 
-        // Check if user has token invalidated
         boolean tokenInvalidated = user.isTokenInvalidated();
         boolean spotifyConnected = user.getEncryptedSpotifyAccessToken() != null;
 
@@ -110,16 +99,9 @@ public class AppHomeService {
                 .blocks(asBlocks(
                         header(header -> header.text(plainText(":musical_note: Trackify"))),
                         divider(),
-
-                        // Connection Status Section
                         buildConnectionStatusSection(spotifyConnected, tokenInvalidated),
-
-                        // Current Playing Section
                         buildCurrentPlayingSection(user),
-
                         divider(),
-
-                        // Sync Settings Section
                         section(section -> section
                                 .text(markdownText("*:gear: Sync Settings*"))
                         ),
@@ -133,23 +115,12 @@ public class AppHomeService {
                                         )
                                 ))
                         ),
-
-                        // Working Hours Section
                         buildWorkingHoursSection(settings),
-
                         divider(),
-
-                        // Device Tracking Section
                         buildDeviceTrackingSection(settings),
-
                         divider(),
-
-                        // Action Buttons
                         buildActionButtons(settings, tokenInvalidated),
-
                         divider(),
-
-                        // Footer
                         context(context -> context.elements(asContextElements(
                                 markdownText(":information_source: Use `/trackify help` to see available commands")
                         )))
@@ -157,9 +128,6 @@ public class AppHomeService {
         );
     }
 
-    /**
-     * Builds the connection status section showing Slack and Spotify connection state.
-     */
     private com.slack.api.model.block.LayoutBlock buildConnectionStatusSection(
             boolean spotifyConnected, boolean tokenInvalidated) {
 
@@ -180,9 +148,6 @@ public class AppHomeService {
         );
     }
 
-    /**
-     * Builds the currently playing section showing active track.
-     */
     private com.slack.api.model.block.LayoutBlock buildCurrentPlayingSection(User user) {
         String nowPlayingText;
         if (user.getCurrentlyPlayingSongTitle() != null) {
@@ -196,9 +161,6 @@ public class AppHomeService {
         return section(section -> section.text(markdownText(nowPlayingText)));
     }
 
-    /**
-     * Builds the working hours section showing configured hours.
-     */
     private com.slack.api.model.block.LayoutBlock buildWorkingHoursSection(UserSettings settings) {
         String workingHoursText;
 
@@ -225,9 +187,6 @@ public class AppHomeService {
         return section(section -> section.text(markdownText(workingHoursText)));
     }
 
-    /**
-     * Builds the device tracking section showing configured devices.
-     */
     private com.slack.api.model.block.LayoutBlock buildDeviceTrackingSection(UserSettings settings) {
         String deviceText;
 
@@ -242,14 +201,10 @@ public class AppHomeService {
         return section(section -> section.text(markdownText(deviceText)));
     }
 
-    /**
-     * Builds action buttons for sync control, settings, and reconnection.
-     */
     private com.slack.api.model.block.LayoutBlock buildActionButtons(
             UserSettings settings, boolean tokenInvalidated) {
 
         if (tokenInvalidated) {
-            // Show reconnect button if token is invalidated
             return actions(actions -> actions
                     .blockId("home_actions")
                     .elements(asElements(
@@ -261,7 +216,6 @@ public class AppHomeService {
                     ))
             );
         } else {
-            // Show normal action buttons (up to 5 elements allowed in actions block)
             return actions(actions -> actions
                     .blockId("home_actions")
                     .elements(asElements(

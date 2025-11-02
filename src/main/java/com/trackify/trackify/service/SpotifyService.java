@@ -68,32 +68,18 @@ public class SpotifyService {
         return refreshRequest.execute();
     }
 
-    /**
-     * Ensures the user has a valid, non-expired Spotify access token.
-     * Automatically refreshes the token if it's expired or about to expire.
-     * This method should be called before any Spotify API operation.
-     *
-     * @param user The user whose token to validate
-     * @return Updated user object with fresh token (or same user if no refresh needed)
-     * @throws IOException, ParseException, SpotifyWebApiException if token refresh fails
-     */
     private User ensureValidToken(User user) throws IOException, ParseException, SpotifyWebApiException {
         if (userService.isSpotifyTokenExpired(user)) {
             log.debug("Spotify token expired or expiring soon for user {}, refreshing...", user.getSlackUserId());
             refreshUserToken(user);
-            // Reload user to get updated token from database
             return userService.findBySlackUserId(user.getSlackUserId())
                     .orElseThrow(() -> new RuntimeException("User not found after token refresh"));
         }
         return user;
     }
 
-    /**
-     * Gets the list of available Spotify devices for a user.
-     */
     public List<SpotifyDevice> getAvailableDevices(User user) {
         try {
-            // Ensure token is valid before API call (refreshes if needed and returns updated user)
             user = ensureValidToken(user);
 
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
@@ -137,7 +123,6 @@ public class SpotifyService {
 
     public CurrentlyPlayingTrackInfo getCurrentlyPlayingTrack(User user) {
         try {
-            // Ensure token is valid before API call (refreshes if needed and returns updated user)
             user = ensureValidToken(user);
 
             String accessToken = userService.getDecryptedSpotifyAccessToken(user);
@@ -155,7 +140,6 @@ public class SpotifyService {
                 Track track = (Track) currentlyPlaying.getItem();
                 String artistName = track.getArtists().length > 0 ? track.getArtists()[0].getName() : AppConstants.UNKNOWN_ARTIST;
 
-                // Get device information
                 String deviceId = currentlyPlaying.getDevice() != null ? currentlyPlaying.getDevice().getId() : null;
                 String deviceName = currentlyPlaying.getDevice() != null ? currentlyPlaying.getDevice().getName() : null;
 
@@ -173,12 +157,10 @@ public class SpotifyService {
 
             return null;
         } catch (UnauthorizedException e) {
-            // Token is invalid or expired
             log.warn("Unauthorized error for user {}: {}", user.getSlackUserId(), e.getMessage());
             handleSpotifyTokenError(user, e.getMessage());
             return null;
         } catch (SpotifyWebApiException e) {
-            // Check if error message indicates token invalidation
             String errorMsg = e.getMessage();
             if (tokenValidationService.isSpotifyTokenInvalidError(errorMsg)) {
                 log.warn("Token invalidation detected for user {}: {}", user.getSlackUserId(), errorMsg);
@@ -193,21 +175,14 @@ public class SpotifyService {
         }
     }
 
-    /**
-     * Handles Spotify token errors by checking if token should be invalidated.
-     */
     private void handleSpotifyTokenError(User user, String errorMessage) {
-        // Mark user as invalidated in database
         tokenValidationService.markUserAsInvalidated(user, errorMessage);
-
-        // Notification will be handled by App Home or separate notification service in the future
         log.warn("Spotify token invalidated for user {}. User should be notified to reconnect.",
                 user.getSlackUserId());
     }
 
     public void pausePlayback(User user) {
         try {
-            // Ensure token is valid before API call (refreshes if needed and returns updated user)
             final User refreshedUser = ensureValidToken(user);
 
             executePlayerCommand(refreshedUser, "pause", () -> {
@@ -223,7 +198,6 @@ public class SpotifyService {
 
     public void resumePlayback(User user) {
         try {
-            // Ensure token is valid before API call (refreshes if needed and returns updated user)
             final User refreshedUser = ensureValidToken(user);
 
             executePlayerCommand(refreshedUser, "resume", () -> {
@@ -283,15 +257,13 @@ public class SpotifyService {
             log.info("Successfully refreshed Spotify token for user {}. New token expires in {} seconds",
                     user.getSlackUserId(), credentials.getExpiresIn());
         } catch (SpotifyWebApiException e) {
-            // Check if this is an "invalid_grant" error (token revoked)
             String errorMsg = e.getMessage();
             if (tokenValidationService.isSpotifyTokenInvalidError(errorMsg)) {
                 log.error("Token refresh failed - token has been revoked for user {}: {}",
                         user.getSlackUserId(), errorMsg);
                 handleSpotifyTokenError(user, errorMsg);
-                throw e; // Re-throw to stop sync
+                throw e;
             } else {
-                // Other error, re-throw
                 log.error("Failed to refresh Spotify token for user {}: {}",
                         user.getSlackUserId(), errorMsg);
                 throw e;

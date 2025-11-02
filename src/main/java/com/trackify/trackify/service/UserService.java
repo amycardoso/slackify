@@ -99,8 +99,6 @@ public class UserService {
         if (user.getSpotifyTokenExpiresAt() == null) {
             return true;
         }
-        // Add 5-minute buffer: refresh token 5 minutes before it actually expires
-        // This prevents API calls from failing due to token expiration during execution
         return LocalDateTime.now().plusMinutes(5).isAfter(user.getSpotifyTokenExpiresAt());
     }
 

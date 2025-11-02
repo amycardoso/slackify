@@ -57,16 +57,12 @@ public class AppHomeHandler {
         log.info("App Home handlers registered successfully");
     }
 
-    /**
-     * Handles app_home_opened event - publishes the home view when user opens App Home tab.
-     */
     private void registerAppHomeOpenedEvent() {
         slackApp.event(AppHomeOpenedEvent.class, (payload, ctx) -> {
             try {
                 String userId = payload.getEvent().getUser();
                 log.debug("App Home opened by user: {}", userId);
 
-                // Get the bot token from installation to publish view
                 String botToken = ctx.getBotToken();
                 appHomeService.publishHomeView(userId, botToken);
 
@@ -78,9 +74,6 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Handles "Enable Sync" button click.
-     */
     private void registerEnableSyncAction() {
         slackApp.blockAction("enable_sync", (req, ctx) -> {
             try {
@@ -97,7 +90,6 @@ public class AppHomeHandler {
                         settings.setSyncEnabled(true);
                         userService.updateUserSettings(settings);
 
-                        // Refresh home view
                         appHomeService.publishHomeView(userId, ctx.getBotToken());
                     }
                 }
@@ -110,9 +102,6 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Handles "Disable Sync" button click.
-     */
     private void registerDisableSyncAction() {
         slackApp.blockAction("disable_sync", (req, ctx) -> {
             try {
@@ -129,7 +118,6 @@ public class AppHomeHandler {
                         settings.setSyncEnabled(false);
                         userService.updateUserSettings(settings);
 
-                        // Refresh home view
                         appHomeService.publishHomeView(userId, ctx.getBotToken());
                     }
                 }
@@ -142,9 +130,6 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Handles "Sync Now" button click - triggers manual sync.
-     */
     private void registerManualSyncAction() {
         slackApp.blockAction("manual_sync", (req, ctx) -> {
             try {
@@ -153,7 +138,6 @@ public class AppHomeHandler {
 
                 musicSyncService.manualSync(userId);
 
-                // Refresh home view to show updated "Now Playing"
                 appHomeService.publishHomeView(userId, ctx.getBotToken());
 
                 return ctx.ack();
@@ -164,9 +148,6 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Handles "Configure Working Hours" button click - opens modal.
-     */
     private void registerConfigureWorkingHoursAction() {
         slackApp.blockAction("configure_working_hours", (req, ctx) -> {
             try {
@@ -187,7 +168,6 @@ public class AppHomeHandler {
                 UserSettings settings = settingsOpt.get();
                 View modalView = buildWorkingHoursModal(settings);
 
-                // Open modal
                 ctx.client().viewsOpen(r -> r
                         .triggerId(req.getPayload().getTriggerId())
                         .view(modalView)
@@ -201,11 +181,7 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Builds the working hours configuration modal.
-     */
     private View buildWorkingHoursModal(UserSettings settings) {
-        // Convert UTC hours to local time for display
         final String startTimeLocal;
         final String endTimeLocal;
 
@@ -219,8 +195,8 @@ public class AppHomeHandler {
                     settings.getSyncEndHour(),
                     settings.getTimezoneOffsetSeconds());
         } else {
-            startTimeLocal = "09:00"; // Default
-            endTimeLocal = "17:00"; // Default
+            startTimeLocal = "09:00";
+            endTimeLocal = "17:00";
         }
 
         return view(view -> view
@@ -275,9 +251,6 @@ public class AppHomeHandler {
         );
     }
 
-    /**
-     * Handles working hours modal submission.
-     */
     private void registerWorkingHoursModalSubmission() {
         slackApp.viewSubmission("working_hours_modal", (req, ctx) -> {
             try {
@@ -287,7 +260,6 @@ public class AppHomeHandler {
                 Map<String, Map<String, com.slack.api.model.view.ViewState.Value>> stateValues =
                         req.getPayload().getView().getState().getValues();
 
-                // Extract enabled checkbox
                 boolean workingHoursEnabled = false;
                 if (stateValues.containsKey("working_hours_enabled")) {
                     var enabledValue = stateValues.get("working_hours_enabled").get("enabled_checkbox");
@@ -297,14 +269,12 @@ public class AppHomeHandler {
                     }
                 }
 
-                // Extract times
                 String startTime = stateValues.get("start_time").get("start_time_picker").getSelectedTime();
                 String endTime = stateValues.get("end_time").get("end_time_picker").getSelectedTime();
 
                 log.debug("Working hours submission: enabled={}, start={}, end={}",
                         workingHoursEnabled, startTime, endTime);
 
-                // Get user and settings
                 Optional<User> userOpt = userService.findBySlackUserId(userId);
                 if (userOpt.isEmpty()) {
                     return ctx.ack();
@@ -318,7 +288,6 @@ public class AppHomeHandler {
 
                 UserSettings settings = settingsOpt.get();
 
-                // Validate and convert times
                 Integer timezoneOffset = settings.getTimezoneOffsetSeconds();
                 if (timezoneOffset == null) {
                     log.warn("User {} has no timezone offset, cannot configure working hours", userId);
@@ -330,16 +299,14 @@ public class AppHomeHandler {
                         startTime, endTime, timezoneOffset);
 
                 if (convertedTimes == null) {
-                    // Validation failed - same start and end time
                     return ctx.ack(r -> r.responseAction("errors")
                             .errors(Map.of("end_time", "Start and end times cannot be the same")));
                 }
 
-                // Save settings
                 userService.updateWorkingHours(
                         user.getId(),
-                        convertedTimes[0], // UTC start hour
-                        convertedTimes[1], // UTC end hour
+                        convertedTimes[0],
+                        convertedTimes[1],
                         workingHoursEnabled
                 );
 
@@ -348,7 +315,6 @@ public class AppHomeHandler {
                         convertedTimes[0] / 100, convertedTimes[0] % 100,
                         convertedTimes[1] / 100, convertedTimes[1] % 100);
 
-                // Refresh home view
                 appHomeService.publishHomeView(userId, ctx.getBotToken());
 
                 return ctx.ack();
@@ -359,9 +325,6 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Handles "Configure Emoji" button click - opens modal.
-     */
     private void registerConfigureEmojiAction() {
         slackApp.blockAction("configure_emoji", (req, ctx) -> {
             try {
@@ -382,7 +345,6 @@ public class AppHomeHandler {
                 UserSettings settings = settingsOpt.get();
                 View modalView = buildEmojiModal(settings);
 
-                // Open modal
                 ctx.client().viewsOpen(r -> r
                         .triggerId(req.getPayload().getTriggerId())
                         .view(modalView)
@@ -396,9 +358,6 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Builds the emoji configuration modal.
-     */
     private View buildEmojiModal(UserSettings settings) {
         return view(view -> view
                 .type("modal")
@@ -427,9 +386,6 @@ public class AppHomeHandler {
         );
     }
 
-    /**
-     * Handles emoji modal submission.
-     */
     private void registerEmojiModalSubmission() {
         slackApp.viewSubmission("emoji_modal", (req, ctx) -> {
             try {
@@ -439,16 +395,14 @@ public class AppHomeHandler {
                 Map<String, Map<String, com.slack.api.model.view.ViewState.Value>> stateValues =
                         req.getPayload().getView().getState().getValues();
 
-                // Extract emoji
                 String emoji = stateValues.get("emoji_input").get("emoji_value").getValue();
 
                 if (emoji == null || emoji.trim().isEmpty()) {
-                    emoji = ":musical_note:"; // Default fallback
+                    emoji = ":musical_note:";
                 }
 
                 log.debug("Emoji submission: emoji={}", emoji);
 
-                // Get user
                 Optional<User> userOpt = userService.findBySlackUserId(userId);
                 if (userOpt.isEmpty()) {
                     return ctx.ack();
@@ -456,12 +410,10 @@ public class AppHomeHandler {
 
                 User user = userOpt.get();
 
-                // Update emoji
                 userService.updateDefaultEmoji(user.getId(), emoji.trim());
 
                 log.info("Updated emoji for user {}: {}", userId, emoji);
 
-                // Refresh home view
                 appHomeService.publishHomeView(userId, ctx.getBotToken());
 
                 return ctx.ack();
@@ -472,9 +424,6 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Handles "Configure Devices" button click - opens modal.
-     */
     private void registerConfigureDevicesAction() {
         slackApp.blockAction("configure_devices", (req, ctx) -> {
             try {
@@ -492,13 +441,11 @@ public class AppHomeHandler {
                     return ctx.ack();
                 }
 
-                // Get available Spotify devices
                 List<SpotifyDevice> devices = spotifyService.getAvailableDevices(user);
 
                 UserSettings settings = settingsOpt.get();
                 View modalView = buildDevicesModal(settings, devices);
 
-                // Open modal
                 ctx.client().viewsOpen(r -> r
                         .triggerId(req.getPayload().getTriggerId())
                         .view(modalView)
@@ -512,12 +459,8 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Builds the devices configuration modal.
-     */
     private View buildDevicesModal(UserSettings settings, List<SpotifyDevice> devices) {
         if (devices.isEmpty()) {
-            // No devices available
             return view(view -> view
                     .type("modal")
                     .callbackId("devices_modal")
@@ -532,7 +475,6 @@ public class AppHomeHandler {
             );
         }
 
-        // Build checkbox options from devices
         List<com.slack.api.model.block.composition.OptionObject> options = new ArrayList<>();
         List<com.slack.api.model.block.composition.OptionObject> initialOptions = new ArrayList<>();
 
@@ -549,7 +491,6 @@ public class AppHomeHandler {
 
             options.add(option);
 
-            // Check if this device should be initially selected
             if (settings.getAllowedDeviceIds() != null &&
                 settings.getAllowedDeviceIds().contains(device.getId())) {
                 initialOptions.add(option);
@@ -585,9 +526,6 @@ public class AppHomeHandler {
         );
     }
 
-    /**
-     * Handles devices modal submission.
-     */
     private void registerDevicesModalSubmission() {
         slackApp.viewSubmission("devices_modal", (req, ctx) -> {
             try {
@@ -597,7 +535,6 @@ public class AppHomeHandler {
                 Map<String, Map<String, com.slack.api.model.view.ViewState.Value>> stateValues =
                         req.getPayload().getView().getState().getValues();
 
-                // Extract selected devices
                 List<String> selectedDeviceIds = new ArrayList<>();
                 if (stateValues.containsKey("devices_selection")) {
                     var devicesValue = stateValues.get("devices_selection").get("devices_checkboxes");
@@ -610,7 +547,6 @@ public class AppHomeHandler {
 
                 log.debug("Devices submission: selected={}", selectedDeviceIds);
 
-                // Get user
                 Optional<User> userOpt = userService.findBySlackUserId(userId);
                 if (userOpt.isEmpty()) {
                     return ctx.ack();
@@ -618,14 +554,12 @@ public class AppHomeHandler {
 
                 User user = userOpt.get();
 
-                // Update devices (null if empty to indicate "all devices")
                 userService.updateAllowedDevices(user.getId(),
                         selectedDeviceIds.isEmpty() ? null : selectedDeviceIds);
 
                 log.info("Updated allowed devices for user {}: {}",
                         userId, selectedDeviceIds.isEmpty() ? "all devices" : selectedDeviceIds);
 
-                // Refresh home view
                 appHomeService.publishHomeView(userId, ctx.getBotToken());
 
                 return ctx.ack();
@@ -636,9 +570,6 @@ public class AppHomeHandler {
         });
     }
 
-    /**
-     * Handles "Reconnect Spotify" button click for invalidated users.
-     */
     private void registerReconnectSpotifyAction() {
         slackApp.blockAction("reconnect_spotify", (req, ctx) -> {
             try {
@@ -652,7 +583,6 @@ public class AppHomeHandler {
 
                 User user = userOpt.get();
 
-                // Send reconnect instructions via DM
                 String reconnectUrl = AppConstants.OAUTH_SPOTIFY_PATH + "?userId=" + user.getId();
                 String message = String.format(
                         ":warning: *Your Spotify connection needs to be renewed*\n\n" +
